@@ -7,7 +7,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from supabase import create_client, Client
 from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
-from db_models import MLPredictionBatch, UserWallet, PortfolioHolding, TransactionLog
+from db_models import UserWallet, PortfolioHolding, TransactionLog
 import datetime
 import requests
 import random
@@ -222,13 +222,6 @@ def get_stock_analysis(symbol: str):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
-@app.get("/stocks/{symbol}/predictions")
-def get_stock_predictions(symbol: str):
-    try:
-        from services.prediction_engine import get_cached_prediction
-        return get_cached_prediction(symbol)
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
 
 @app.get("/stocks/{symbol}/chart")
 def get_stock_chart(symbol: str, range: str = Query("1M")):

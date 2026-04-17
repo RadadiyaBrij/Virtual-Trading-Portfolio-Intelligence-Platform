@@ -38,10 +38,10 @@ class TransactionLog(Base):
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
 
 # ──────────────────────────────────────────────────────────
-# 2. MACHINE LEARNING HORIZON ARCHITECTURE
+# 2. FUNDAMENTAL SCORING ARCHITECTURE
 # ──────────────────────────────────────────────────────────
-class MLPredictionBatch(Base):
-    __tablename__ = "ml_predictions"
+class StockScoreCache(Base):
+    __tablename__ = "stock_scores"
     
     # Store the daily batch run projections for extremely fast fetching
     symbol = Column(String, primary_key=True, index=True)
@@ -50,16 +50,8 @@ class MLPredictionBatch(Base):
     fundamental_score = Column(Float)
     rating = Column(String)
     
-    # Time Horizon Coordinate Architecture (from Blueprint Step 4)
-    price_day_0 = Column(Float) # Current Price
-    price_day_1 = Column(Float) # Tomorrow Prediction Target
-    price_day_7 = Column(Float) # Next Week Target
-    price_day_30 = Column(Float) # Next Month Target
-    
-    # Raw target probabilities (optional data returned to UI)
-    prob_1d = Column(Float)
-    prob_7d = Column(Float)
-    prob_30d = Column(Float)
+    # Current Price at time of computation
+    current_price = Column(Float)
     
     # Cron Update Timestamp
     last_computed = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)

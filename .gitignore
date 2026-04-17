@@ -21,7 +21,19 @@ lerna-debug.log*
 # Environment Variables
 .env
 .env.local
+.env.*
 *.local
+
+# ML Models & Binary Data
+*.pkl
+*.model
+*.joblib
+
+# Debug / Temporary files
+_db_out.txt
+test_db.py
+tmp/
+temp/
 
 # OS files
 .DS_Store
