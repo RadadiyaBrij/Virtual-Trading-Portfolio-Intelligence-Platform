@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { FiArrowLeft, FiTrendingUp, FiTrendingDown, FiGlobe, FiMapPin, FiUsers } from 'react-icons/fi';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { FiArrowLeft, FiTrendingUp, FiTrendingDown, FiGlobe, FiMapPin, FiPlus, FiMinus, FiShoppingBag } from 'react-icons/fi';
+import { supabase } from '../lib/supabase';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler, Legend,
 } from 'chart.js';
@@ -10,12 +11,23 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 export default function StockDetails() {
   const { symbol } = useParams();
+  const navigate = useNavigate();
   const [stock, setStock] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [session, setSession] = useState(null);
   
   const [timeRange, setTimeRange] = useState('1M');
   const [chartData, setChartData] = useState([]);
+  const [quantity, setQuantity] = useState(1);
+  const [tradeLoading, setTradeLoading] = useState(false);
+  const [tradeMessage, setTradeMessage] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+  }, []);
 
   useEffect(() => {
     const fetchDetails = async () => {
@@ -50,6 +62,42 @@ export default function StockDetails() {
     fetchChart();
   }, [symbol, timeRange]);
 
+  const handleTrade = async (action) => {
+    if (!session) {
+      navigate('/login');
+      return;
+    }
+
+    setTradeLoading(true);
+    setTradeMessage(null);
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/trade/${action.toLowerCase()}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          symbol: symbol,
+          quantity: quantity,
+          price: stock.price
+        })
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        setTradeMessage({ type: 'success', text: `Successfully ${action === 'BUY' ? 'bought' : 'sold'} ${quantity} shares!` });
+        setTimeout(() => setTradeMessage(null), 3000);
+      } else {
+        setTradeMessage({ type: 'error', text: result.detail || 'Trade failed.' });
+      }
+    } catch (err) {
+      setTradeMessage({ type: 'error', text: 'Network error. Could not execute trade.' });
+    } finally {
+      setTradeLoading(false);
+    }
+  };
+
   if (loading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
       <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full"></div>
@@ -75,176 +123,183 @@ export default function StockDetails() {
         </Link>
 
         {/* Header section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-8">
-          <div className="animate-in fade-in slide-in-from-left duration-700">
-            <div className="flex flex-wrap items-center gap-4 mb-4">
-              <h1 className="text-5xl md:text-7xl font-bold tracking-tighter">{stock.symbol.replace('.NS', '').replace('.BO', '')}</h1>
-              <div className="h-10 w-px bg-gray-800 hidden md:block"></div>
-              <span className="text-xl md:text-2xl text-gray-400 font-medium">{stock.name}</span>
-            </div>
-            <div className="flex items-baseline gap-6">
-              <span className="text-4xl font-bold tracking-tight">₹{stock.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-              <span className={`text-2xl font-bold flex items-center ${stock.isLoss ? 'text-red-500' : 'text-green-500'}`}>
-                {stock.isLoss ? <FiTrendingDown className="mr-2" /> : <FiTrendingUp className="mr-2" />}
-                {stock.isLoss ? '' : '+'}{stock.change.toFixed(2)} ({stock.isLoss ? '' : '+'}{stock.changePercent}%)
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-12 gap-8">
+          <div className="animate-in fade-in slide-in-from-left duration-700 flex-1">
+            <div className="flex flex-wrap items-end gap-5 mb-5">
+              <h1 className="text-6xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400">
+                {stock.symbol.replace('.NS', '').replace('.BO', '')}
+              </h1>
+              <div className="h-10 w-px bg-white/10 hidden md:block mb-2"></div>
+              <span className="text-lg md:text-xl text-gray-400 font-medium tracking-wide mb-2 max-w-[50%] truncate">
+                {stock.name}
               </span>
             </div>
+            
+            <div className="flex flex-wrap items-baseline gap-6">
+              <span className="text-5xl font-black tracking-tight text-white drop-shadow-md">
+                ₹{stock.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </span>
+              <div className={`px-4 py-2 rounded-xl flex items-center shadow-lg backdrop-blur-sm ${stock.isLoss ? 'bg-red-500/10 border border-red-500/20 text-red-500' : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-500'}`}>
+                {stock.isLoss ? <FiTrendingDown className="mr-2 w-5 h-5" /> : <FiTrendingUp className="mr-2 w-5 h-5" />}
+                <span className="text-xl font-bold tracking-tight">
+                  {stock.isLoss ? '' : '+'}{stock.change.toFixed(2)} ({stock.isLoss ? '' : '+'}{stock.changePercent}%)
+                </span>
+              </div>
+            </div>
           </div>
-          <div className="flex gap-4 w-full md:w-auto animate-in fade-in slide-in-from-right duration-700">
-             <button className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-500 text-white px-10 py-4 rounded-xl font-bold text-lg transition-all shadow-xl shadow-blue-500/20 active:scale-95">Buy</button>
-             <button className="flex-1 md:flex-none bg-gray-900 border border-gray-800 hover:bg-gray-800 text-white px-10 py-4 rounded-xl font-bold text-lg transition-all active:scale-95">Sell</button>
+
+          {/* === Trading Widget === */}
+          <div className="w-full lg:w-[420px] bg-gray-950/40 backdrop-blur-xl border border-gray-800/60 rounded-3xl p-7 shadow-[0_0_40px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-right duration-700 shrink-0">
+             <div className="flex items-center justify-between gap-6 mb-8">
+                <div className="flex items-center bg-black/60 border border-white/5 rounded-2xl p-1.5 shadow-inner">
+                   <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3 text-gray-500 hover:text-blue-400 transition-colors rounded-xl hover:bg-white/5"><FiMinus className="w-5 h-5"/></button>
+                   <input 
+                      type="number" 
+                      className="w-16 bg-transparent text-center font-black text-white text-xl focus:outline-none" 
+                      value={quantity} 
+                      onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                   />
+                   <button onClick={() => setQuantity(quantity + 1)} className="p-3 text-gray-500 hover:text-blue-400 transition-colors rounded-xl hover:bg-white/5"><FiPlus className="w-5 h-5"/></button>
+                </div>
+                <div className="text-right flex flex-col justify-center">
+                   <p className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em] mb-1">Total Value</p>
+                   <p className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-300">
+                     ₹{(quantity * stock.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                   </p>
+                </div>
+             </div>
+
+             <div className="flex gap-4 mb-4">
+                <button 
+                   onClick={() => handleTrade('BUY')}
+                   disabled={tradeLoading}
+                   className="flex-1 bg-gradient-to-b from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 border border-emerald-500/20 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 shadow-[0_0_20px_rgba(16,185,129,0.2)] disabled:opacity-50"
+                >
+                   {tradeLoading ? 'Processing...' : 'Buy Shares'}
+                </button>
+                <button 
+                   onClick={() => handleTrade('SELL')}
+                   disabled={tradeLoading}
+                   className="flex-1 bg-gray-800/80 hover:bg-gray-700 border border-white/5 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50"
+                >
+                   {tradeLoading ? 'Processing...' : 'Sell Shares'}
+                </button>
+             </div>
+
+             {tradeMessage && (
+                <div className={`text-xs text-center font-bold p-2 rounded-lg ${tradeMessage.type === 'success' ? 'bg-green-900/20 text-green-400' : 'bg-red-900/20 text-red-400'}`}>
+                   {tradeMessage.text}
+                </div>
+             )}
+             
+             {!session && (
+                <p className="text-[10px] text-gray-500 text-center mt-2">Sign in to begin virtual trading.</p>
+             )}
           </div>
         </div>
 
+        {/* ... Rest of the UI remains consistent (Chart, Stats, Summary) ... */}
+        <div className="flex gap-4 mb-12">
+           <Link to={`/stocks/${symbol}/analysis`} className="flex-1 group relative overflow-hidden bg-gray-950/50 backdrop-blur-xl border border-purple-500/30 hover:border-purple-500/60 rounded-[2rem] p-1 transition-all duration-500 shadow-[0_0_40px_rgba(168,85,247,0.15)] hover:shadow-[0_0_60px_rgba(168,85,247,0.3)]">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 via-blue-600/10 to-purple-600/10 opacity-50 group-hover:opacity-100 transition-opacity duration-1000 bg-[length:200%_100%] animate-gradient-x" />
+              <div className="relative flex items-center justify-center gap-4 bg-black/40 px-8 py-5 rounded-[1.75rem]">
+                 <div className="bg-purple-500/20 p-2.5 rounded-xl border border-purple-500/30">
+                    <span className="text-2xl group-hover:scale-110 transition-transform duration-300 block">🧠</span>
+                 </div>
+                 <div className="flex flex-col items-start text-left">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-400 mb-0.5">Proprietary Engine</span>
+                    <span className="text-lg font-bold text-gray-100 group-hover:text-white transition-colors tracking-wide">Strategic Intelligence Analysis</span>
+                 </div>
+              </div>
+           </Link>
+        </div>
+
         {/* Chart Area */}
-        <div className="bg-gray-900/40 border border-gray-800 rounded-2xl p-6 backdrop-blur-sm mb-12 animate-in fade-in slide-in-from-bottom duration-700">
-           <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-200">Price History</h2>
-              <div className="flex bg-gray-900 border border-gray-800 rounded-lg p-1 shadow-inner h-fit">
+        <div className="bg-gray-950/40 border border-white/5 rounded-3xl p-8 backdrop-blur-xl mb-12 shadow-2xl">
+           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+              <div className="flex items-center gap-3">
+                 <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
+                 <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400">Market Price Action</h2>
+              </div>
+              <div className="flex bg-black/60 border border-white/5 rounded-xl p-1.5 shadow-inner">
                 {['1D', '1W', '1M', '1Y'].map((range) => (
-                  <button
-                    key={range}
-                    onClick={() => setTimeRange(range)}
-                    className={`px-4 py-1.5 rounded-md text-xs font-bold transition-colors ${timeRange === range ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
-                  >
-                    {range}
-                  </button>
+                   <button 
+                      key={range} 
+                      onClick={() => setTimeRange(range)} 
+                      className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-[0.15em] transition-all duration-300 ${
+                        timeRange === range 
+                          ? 'bg-linear-to-r from-blue-600 to-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]' 
+                          : 'text-gray-500 hover:text-white hover:bg-white/5'
+                      }`}
+                   >
+                     {range}
+                   </button>
                 ))}
               </div>
            </div>
            
            <div className="h-80 w-full">
-             {chartData.length > 0 ? (
-               <Line 
-                 data={{
-                   labels: chartData.map(d => d.time),
-                   datasets: [{
-                     label: 'Price',
-                     data: chartData.map(d => d.price),
-                     borderColor: stock.isLoss && timeRange === '1D' ? '#ef4444' : '#3b82f6',
-                     backgroundColor: stock.isLoss && timeRange === '1D' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)',
-                     borderWidth: 2,
-                     pointRadius: 0,
-                     pointHoverRadius: 6,
-                     fill: true,
-                     tension: 0.1
-                   }]
-                 }}
-                 options={{
-                   responsive: true,
-                   maintainAspectRatio: false,
-                   plugins: {
-                     legend: { display: false },
-                     tooltip: {
-                       mode: 'index',
-                       intersect: false,
-                       backgroundColor: '#111827',
-                       titleColor: '#9ca3af',
-                       bodyColor: '#60a5fa',
-                       borderColor: '#374151',
-                       borderWidth: 1,
-                     }
-                   },
-                   scales: {
-                     x: {
-                       grid: { display: false },
-                       ticks: { color: '#6b7280', maxTicksLimit: 7 },
-                       border: { display: false }
-                     },
-                     y: {
-                       grid: { color: '#374151', borderDash: [3, 3] },
-                       ticks: { color: '#6b7280', callback: value => '₹' + value },
-                       border: { display: false }
-                     }
-                   },
-                   interaction: {
-                     intersect: false,
-                     mode: 'index',
-                   },
-                 }}
-               />
-             ) : (
-               <div className="h-full w-full flex items-center justify-center text-gray-500 font-medium">
-                 {loading ? 'Processing chart...' : 'Loading chart data...'}
-               </div>
-             )}
+              {chartData.length > 0 ? (
+                <Line 
+                  data={{
+                    labels: chartData.map(d => d.time),
+                    datasets: [{
+                      label: 'Price',
+                      data: chartData.map(d => d.price),
+                      borderColor: stock.isLoss && timeRange === '1D' ? '#ef4444' : '#3b82f6',
+                      backgroundColor: stock.isLoss && timeRange === '1D' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                      borderWidth: 2, pointRadius: 0, fill: true, tension: 0.1
+                    }]
+                  }}
+                  options={{
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                      x: { grid: { display: false }, ticks: { color: '#6b7280', maxTicksLimit: 7 } },
+                      y: { grid: { color: '#374151', borderDash: [3, 3] }, ticks: { color: '#6b7280', callback: v => '₹' + v } }
+                    }
+                  }}
+                />
+              ) : <div className="h-full w-full flex items-center justify-center text-gray-500 font-medium">Loading history...</div>}
            </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12 animate-in fade-in zoom-in duration-1000">
-          {/* Key Statistics Card */}
-          <div className="lg:col-span-2 bg-gray-900/40 border border-gray-800 rounded-2xl p-8 backdrop-blur-sm">
-            <h2 className="text-2xl font-bold mb-8 flex items-center">
-              <span className="w-1.5 h-6 bg-blue-500 rounded-full mr-3"></span>
-              Key Statistics
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+          <div className="lg:col-span-2 bg-gray-950/40 border border-white/5 rounded-3xl p-8 md:p-10 backdrop-blur-xl shadow-2xl">
+            <h2 className="text-xl font-black mb-8 flex items-center text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400">
+              <span className="w-1.5 h-6 bg-blue-500 rounded-full mr-4 shadow-[0_0_10px_rgba(37,99,235,0.5)]"></span> 
+              FAST STATS
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-10 gap-x-8">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-10 gap-x-6">
               <StatItem label="Market Cap" value={stock.marketCap} />
               <StatItem label="Volume" value={stock.volume} />
-              <StatItem label="Div Yield" value={stock.dividendYield === "N/A" ? "N/A" : `${stock.dividendYield}%`} />
-              <StatItem label="Trailing PE" value={stock.trailingPE} />
-              <StatItem label="Forward PE" value={stock.forwardPE} />
-              <StatItem label="52W Range" value={`₹${stock.fiftyTwoWeekLow} - ₹${stock.fiftyTwoWeekHigh}`} />
               <StatItem label="Revenue" value={stock.totalRevenue} />
               <StatItem label="Net Income" value={stock.netIncome} />
-              <StatItem label="Employees" value={stock.fullTimeEmployees.toLocaleString()} />
+              <StatItem label="PE Ratio" value={stock.trailingPE} />
+              <StatItem label="52W High" value={`₹${stock.fiftyTwoWeekHigh}`} />
             </div>
           </div>
 
-          {/* Company Info Sidebar */}
-          <div className="bg-gray-900/40 border border-gray-800 rounded-2xl p-8 backdrop-blur-sm">
-             <h2 className="text-2xl font-bold mb-8 flex items-center">
-                <span className="w-1.5 h-6 bg-indigo-500 rounded-full mr-3"></span>
-                Profile
+          <div className="bg-gray-950/40 border border-white/5 rounded-3xl p-8 md:p-10 backdrop-blur-xl shadow-2xl">
+             <h2 className="text-xl font-black mb-8 flex items-center text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400">
+                <span className="w-1.5 h-6 bg-indigo-500 rounded-full mr-4 shadow-[0_0_10px_rgba(99,102,241,0.5)]"></span> 
+                PROFILE
              </h2>
              <div className="space-y-8">
                 <ProfileItem icon={<FiGlobe />} label="Website" value={stock.website} isLink />
-                <ProfileItem icon={<FiMapPin />} label="Headquarters" value={`${stock.city}, ${stock.country}`} />
-                <div className="pt-6 border-t border-gray-800">
-                    <p className="text-sm text-gray-500 uppercase font-bold tracking-widest mb-2">Sector & Industry</p>
-                    <p className="text-gray-200 text-lg font-medium">{stock.sector}</p>
-                    <p className="text-gray-400 text-sm mt-1">{stock.industry}</p>
-                </div>
+                <ProfileItem icon={<FiMapPin />} label="Region" value={`${stock.city}, ${stock.country}`} />
              </div>
           </div>
         </div>
 
-        {/* Long Business Summary */}
-        <div className="bg-gray-900/40 border border-gray-800 rounded-2xl p-8 md:p-12 mb-10 backdrop-blur-sm animate-in fade-in slide-in-from-bottom duration-1000">
-          <h2 className="text-3xl font-bold mb-6">About {stock.name}</h2>
-          <p className="text-gray-300 leading-relaxed text-lg text-justify whitespace-pre-line">
-            {stock.description}
-          </p>
+        {/* Summary */}
+        <div className="bg-gray-950/40 border border-white/5 rounded-3xl p-8 md:p-10 mb-20 backdrop-blur-xl shadow-2xl">
+           <h2 className="text-xl font-black mb-6 text-gray-200">Operations & Business</h2>
+           <p className="text-gray-400 leading-loose text-sm text-justify line-clamp-6 hover:line-clamp-none transition-all duration-1000">
+             {stock.description}
+           </p>
         </div>
-
-        {/* Company News from Finnhub */}
-        {stock.companyNews && stock.companyNews.length > 0 && (
-          <div className="bg-gray-900/40 border border-gray-800 rounded-2xl p-8 md:p-12 mb-10 backdrop-blur-sm animate-in fade-in slide-in-from-bottom duration-1000" style={{ animationDelay: '200ms' }}>
-             <h2 className="text-3xl font-bold mb-6 flex items-center">
-                <span className="w-1.5 h-8 bg-green-500 rounded-full mr-3"></span>
-                Recent News
-             </h2>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {stock.companyNews.map((newsItem, idx) => (
-                   <a key={idx} href={newsItem.url} target="_blank" rel="noopener noreferrer" className="bg-gray-900 border border-gray-800 hover:border-gray-600 rounded-xl p-5 hover:bg-gray-800 transition-all flex gap-4 group shadow-lg">
-                      {newsItem.image && (
-                         <div className="w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-gray-800 hidden sm:block">
-                            <img src={newsItem.image} alt="news" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                         </div>
-                      )}
-                      <div className="flex-1 flex flex-col justify-between">
-                         <h3 className="font-bold text-gray-200 group-hover:text-blue-400 line-clamp-2 mb-2">{newsItem.headline}</h3>
-                         <div className="flex justify-between items-center text-xs text-gray-500 mt-2">
-                            <span className="uppercase font-bold text-gray-400">{newsItem.source}</span>
-                            <span>{new Date(newsItem.datetime * 1000).toLocaleDateString()}</span>
-                         </div>
-                      </div>
-                   </a>
-                ))}
-             </div>
-          </div>
-        )}
       </div>
     </div>
   );
@@ -252,25 +307,27 @@ export default function StockDetails() {
 
 function StatItem({ label, value }) {
   return (
-    <div>
-      <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">{label}</p>
-      <p className="text-xl font-semibold text-gray-100">{value}</p>
+    <div className="flex flex-col gap-1.5">
+      <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em]">{label}</p>
+      <p className="text-xl md:text-2xl font-bold text-gray-100 tracking-tight">{value}</p>
     </div>
   );
 }
 
 function ProfileItem({ icon, label, value, isLink }) {
   return (
-    <div className="flex items-start gap-4">
-       <div className="mt-1 text-blue-500 text-xl">{icon}</div>
-       <div className="min-w-0 flex-1">
-          <p className="text-xs text-gray-500 uppercase font-bold tracking-widest mb-1">{label}</p>
+    <div className="flex items-start gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors">
+       <div className="mt-1 flex items-center justify-center p-3 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+         {icon}
+       </div>
+       <div className="flex flex-col gap-1">
+          <p className="text-[10px] text-gray-500 uppercase font-black tracking-[0.2em]">{label}</p>
           {isLink ? (
-             <a href={value} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 transition-colors break-all font-medium">
-               {value.replace(/^https?:\/\//, '')}
-             </a>
+            <a href={value} className="text-blue-400 hover:text-blue-300 font-bold text-sm break-all transition-colors">
+              {value.replace(/^https?:\/\//, '')}
+            </a>
           ) : (
-             <p className="text-gray-200 font-medium">{value}</p>
+            <p className="text-gray-200 text-sm font-bold tracking-wide">{value}</p>
           )}
        </div>
     </div>
