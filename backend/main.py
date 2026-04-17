@@ -46,7 +46,7 @@ def verify_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     except Exception:
         raise HTTPException(status_code=401, detail="Authentication Failed")
 
-app = FastAPI(title="Antigravity Virtual Trading Platform API")
+app = FastAPI(title="Capital Terminal Trading Platform API")
 
 @app.on_event("startup")
 def startup_db_init():

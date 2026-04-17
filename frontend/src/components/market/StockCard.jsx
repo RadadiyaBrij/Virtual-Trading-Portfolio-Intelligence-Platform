@@ -1,9 +1,15 @@
 import React from 'react';
 import { FiTrendingUp, FiTrendingDown, FiStar } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 
 const StockCard = ({ symbol, name, price, change, changePercent, volume, isLoss }) => {
+  const navigate = useNavigate();
+
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 hover:bg-gray-800 transition-all duration-300 shadow-lg hover:shadow-blue-500/10 hover:border-gray-700 group cursor-pointer relative overflow-hidden">
+    <div 
+      onClick={() => navigate(`/stocks/${symbol}`)}
+      className="bg-gray-900 border border-gray-800 rounded-xl p-5 hover:bg-gray-800 transition-all duration-300 shadow-lg hover:shadow-blue-500/10 hover:border-gray-700 group cursor-pointer relative overflow-hidden"
+    >
       {/* Subtle Background Glow behind text */}
       <div className="absolute top-0 right-0 -mr-8 -mt-8 w-24 h-24 bg-blue-500 rounded-full blur-3xl opacity-0 group-hover:opacity-10 transition-opacity duration-500"></div>
 
@@ -12,7 +18,13 @@ const StockCard = ({ symbol, name, price, change, changePercent, volume, isLoss 
           <h3 className="text-xl font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">{symbol}</h3>
           <p className="text-sm text-gray-400">{name}</p>
         </div>
-        <button className="text-gray-500 hover:text-yellow-500 transition-colors">
+        <button 
+          onClick={(e) => {
+            e.stopPropagation();
+            // Handle fave
+          }}
+          className="text-gray-500 hover:text-yellow-500 transition-colors"
+        >
           <FiStar className="w-5 h-5" />
         </button>
       </div>
