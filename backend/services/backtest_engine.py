@@ -10,29 +10,66 @@ from .ml_features import build_features
 
 def run_backtest(symbol: str) -> dict:
     try:
-        # Fetch 15 years of data
-        df_raw = yf.download(symbol, start="2011-01-01", end="2026-01-01", progress=False)
+        # We fetch 10 years of data for the target symbol and a broad market proxy (SPY) 
+        # to build a generalized model that doesn't overfit to a single stock.
+        tickers = [symbol, "SPY"] if symbol != "SPY" else [symbol, "QQQ"]
         
-        if df_raw.empty:
+        df_dict = {}
+        for tick in tickers:
+            df_raw = yf.download(tick, start="2016-01-01", end="2026-01-01", progress=False)
+            if not df_raw.empty:
+                if isinstance(df_raw.columns, pd.MultiIndex):
+                    df_raw.columns = df_raw.columns.get_level_values(0)
+                df_dict[tick] = df_raw
+                
+        if symbol not in df_dict or df_dict[symbol].empty:
             return {"status": "error", "message": "No data found for symbol"}
             
-        if isinstance(df_raw.columns, pd.MultiIndex):
-            df_raw.columns = df_raw.columns.get_level_values(0)
-            
+        target_df = df_dict[symbol]
+        
         horizons = {"1d": 1, "7d": 7, "30d": 30}
-        predictions = pd.DataFrame(index=df_raw.index)
+        predictions = pd.DataFrame(index=target_df.index)
         
         model_metrics = {}
         
-        # Train and Predict 
+        # Train and Predict for each horizon
         for h_name, h_days in horizons.items():
-            df_features = build_features(df_raw, horizon=h_name, is_training=True)
-            if len(df_features) < 500:
+            # 1. Variable Data Requirements per Model
+            if h_name == "1d":
+                lookback_years = 4 # 3-5 years is enough for short-term noise
+            elif h_name == "7d":
+                lookback_years = 7 # 5-7 years for swing
+            else:
+                lookback_years = 10 # 10 years for macro
+                
+            # Filter all dataframes to the required lookback
+            lookback_days = lookback_years * 252
+            
+            train_features_list = []
+            test_df = None
+            
+            for tick, raw_data in df_dict.items():
+                filtered_raw = raw_data.iloc[-lookback_days:].copy() if len(raw_data) > lookback_days else raw_data.copy()
+                
+                df_features = build_features(filtered_raw, horizon=h_name, is_training=True)
+                
+                if len(df_features) < 100:
+                    continue
+                    
+                split = int(len(df_features) * 0.8)
+                train_part = df_features.iloc[:split].copy()
+                
+                train_features_list.append(train_part)
+                
+                # Only keep the test set for our actual target symbol
+                if tick == symbol:
+                    test_df = df_features.iloc[split:].copy()
+            
+            if test_df is None or len(train_features_list) == 0:
                 return {"status": "error", "message": f"Not enough data points for {h_name} model"}
                 
-            split = int(len(df_features) * 0.8)
-            train_df = df_features.iloc[:split].copy()
-            test_df = df_features.iloc[split:].copy()
+            # Combine multiple stocks into one generalized training set
+            train_df = pd.concat(train_features_list, ignore_index=True)
             
             features = [col for col in df_features.columns if col not in ['target', 'target_class', 'Open', 'High', 'Low', 'Close', 'Volume']]
             
@@ -120,9 +157,9 @@ def run_backtest(symbol: str) -> dict:
         win_rate = winning_trades / trades_taken if trades_taken > 0 else 0
         avg_trade_return = np.mean(trade_returns) if trade_returns else 0
         
-        # Buy & Hold Return 
-        start_price = df_raw.loc[predictions.index[0]]['Close']
-        end_price = df_raw.loc[predictions.index[-1]]['Close']
+        # Buy & Hold Return for the same period (using the test set index)
+        start_price = target_df.loc[predictions.index[0]]['Close']
+        end_price = target_df.loc[predictions.index[-1]]['Close']
         buy_and_hold_return = (end_price / start_price) - 1
         
         # Calculate Max Drawdown
@@ -218,8 +255,8 @@ def run_backtest(symbol: str) -> dict:
         risk_level = "LOW" if abs_dd < 0.10 else ("MEDIUM" if abs_dd < 0.25 else "HIGH")
         
         # Explainability (Why this signal?)
-        
-        df_latest_features = build_features(df_raw, horizon="30d", is_training=False).iloc[-1]
+        # Fetch the very last row of raw features for the 30d model to extract live indicators
+        df_latest_features = build_features(target_df, horizon="30d", is_training=False).iloc[-1]
         
         reasons = []
         if df_latest_features.get('trend_regime', 0) == 1:
