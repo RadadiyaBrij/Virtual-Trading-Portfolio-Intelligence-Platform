@@ -223,10 +223,31 @@ def get_stock_analysis(symbol: str):
         return {"status": "error", "message": str(e)}
 
 @app.get("/stocks/{symbol}/backtest")
-def get_stock_backtest(symbol: str):
+def get_stock_backtest(symbol: str, db: Session = Depends(get_db)):
     try:
+        from db_models import MLBacktestCache
+        
+        # Check cache first
+        cached = db.query(MLBacktestCache).filter(MLBacktestCache.symbol == symbol.upper()).first()
+        if cached:
+            time_diff = datetime.datetime.utcnow() - cached.last_computed
+            if time_diff.total_seconds() < 86400: # 24 hours
+                return cached.backtest_data
+                
+        # If no cache or expired, run backtest
         from services.backtest_engine import run_backtest
-        return run_backtest(symbol)
+        result = run_backtest(symbol)
+        
+        if result.get("status") == "success":
+            if cached:
+                cached.backtest_data = result
+                cached.last_computed = datetime.datetime.utcnow()
+            else:
+                new_cache = MLBacktestCache(symbol=symbol.upper(), backtest_data=result)
+                db.add(new_cache)
+            db.commit()
+            
+        return result
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
@@ -299,3 +320,17 @@ def sell_stock(trade: dict, user=Depends(verify_user), db: Session = Depends(get
     db.add(TransactionLog(user_id=user.id, symbol=symbol, action="SELL", quantity=quantity, price_per_share_local=price, exchange_rate_applied=rate, total_value_inr=total_gain))
     db.commit()
     return {"status": "success", "new_balance": wallet.balance_inr}
+
+@app.get("/transactions")
+def get_transactions(user=Depends(verify_user), db: Session = Depends(get_db)):
+    logs = db.query(TransactionLog).filter(TransactionLog.user_id == user.id).order_by(TransactionLog.timestamp.desc()).all()
+    return [{
+        "id": log.id,
+        "symbol": log.symbol,
+        "action": log.action,
+        "quantity": log.quantity,
+        "price_per_share_local": log.price_per_share_local,
+        "exchange_rate_applied": log.exchange_rate_applied,
+        "total_value_inr": log.total_value_inr,
+        "timestamp": log.timestamp.isoformat()
+    } for log in logs]

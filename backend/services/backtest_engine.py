@@ -10,17 +10,20 @@ from .ml_features import build_features
 
 def run_backtest(symbol: str) -> dict:
     try:
-        # We fetch 10 years of data for the target symbol and a broad market proxy (SPY) 
-        # to build a generalized model that doesn't overfit to a single stock.
+
         tickers = [symbol, "SPY"] if symbol != "SPY" else [symbol, "QQQ"]
         
         df_dict = {}
         for tick in tickers:
-            df_raw = yf.download(tick, start="2016-01-01", end="2026-01-01", progress=False)
-            if not df_raw.empty:
-                if isinstance(df_raw.columns, pd.MultiIndex):
-                    df_raw.columns = df_raw.columns.get_level_values(0)
-                df_dict[tick] = df_raw
+            try:
+                # FIX 5: TIMEOUT PROTECTION
+                df_raw = yf.download(tick, start="2016-01-01", end="2026-01-01", progress=False, timeout=10)
+                if df_raw is not None and not df_raw.empty:
+                    if isinstance(df_raw.columns, pd.MultiIndex):
+                        df_raw.columns = df_raw.columns.get_level_values(0)
+                    df_dict[tick] = df_raw
+            except Exception:
+                continue
                 
         if symbol not in df_dict or df_dict[symbol].empty:
             return {"status": "error", "message": "No data found for symbol"}
@@ -32,17 +35,15 @@ def run_backtest(symbol: str) -> dict:
         
         model_metrics = {}
         
-        # Train and Predict for each horizon
         for h_name, h_days in horizons.items():
-            # 1. Variable Data Requirements per Model
+            
             if h_name == "1d":
-                lookback_years = 4 # 3-5 years is enough for short-term noise
+                lookback_years = 4 
             elif h_name == "7d":
-                lookback_years = 7 # 5-7 years for swing
+                lookback_years = 7 
             else:
-                lookback_years = 10 # 10 years for macro
+                lookback_years = 10 
                 
-            # Filter all dataframes to the required lookback
             lookback_days = lookback_years * 252
             
             train_features_list = []
@@ -157,22 +158,18 @@ def run_backtest(symbol: str) -> dict:
         win_rate = winning_trades / trades_taken if trades_taken > 0 else 0
         avg_trade_return = np.mean(trade_returns) if trade_returns else 0
         
-        # Buy & Hold Return for the same period (using the test set index)
         start_price = target_df.loc[predictions.index[0]]['Close']
         end_price = target_df.loc[predictions.index[-1]]['Close']
         buy_and_hold_return = (end_price / start_price) - 1
         
-        # Calculate Max Drawdown
         equity_series = pd.Series(equity_curve)
         rolling_max = equity_series.cummax()
         drawdowns = (equity_series - rolling_max) / rolling_max
         max_drawdown = float(drawdowns.min()) if not drawdowns.empty else 0.0
         
-        # Latest Signals & Explainability
         latest = predictions.iloc[-1]
         p30, p7, p1 = latest['prob_30d'], latest['prob_7d'], latest['prob_1d']
         
-        # Expected Return Ranges and Confidence per Horizon
         def get_horizon_metrics(p, h_name):
             conf = "HIGH" if p > 0.58 else ("MEDIUM" if p >= 0.52 else "LOW")
             signal_str = "BUY" if p > 0.52 else ("SELL" if p < 0.48 else "NEUTRAL")
@@ -195,12 +192,10 @@ def run_backtest(symbol: str) -> dict:
         trend_7d_str, conf_7d, exp_7d = get_horizon_metrics(p7, '7d')
         trend_30d_str, conf_30d, exp_30d = get_horizon_metrics(p30, '30d')
         
-        # Trend Alignment
         trend_30d = "Bullish" if p30 > 0.52 else ("Bearish" if p30 < 0.48 else "Neutral")
         trend_7d = "Bullish" if p7 > 0.52 else ("Bearish" if p7 < 0.48 else "Neutral")
         trend_1d = "Bullish" if p1 > 0.52 else ("Pullback" if p1 < 0.48 else "Neutral")
         
-        # Final Combined Signal Logic
         final_conf_str = "HIGH" if p30 > 0.58 else ("MEDIUM" if p30 >= 0.52 else "LOW")
         
         if p30 > 0.52 and p7 > 0.52 and p1 > 0.52:
@@ -219,7 +214,6 @@ def run_backtest(symbol: str) -> dict:
             latest_signal = "NEUTRAL"
             allocation = "0%"
             
-        # Holding vs Not Holding Action Logic
         def decide_action(s1d, s7d, s30d, holding):
             s1d = "AVOID" if s1d == "NEUTRAL" else s1d
             s7d = "AVOID" if s7d == "NEUTRAL" else s7d
@@ -254,7 +248,6 @@ def run_backtest(symbol: str) -> dict:
         abs_dd = abs(max_drawdown)
         risk_level = "LOW" if abs_dd < 0.10 else ("MEDIUM" if abs_dd < 0.25 else "HIGH")
         
-        # Explainability (Why this signal?)
         # Fetch the very last row of raw features for the 30d model to extract live indicators
         df_latest_features = build_features(target_df, horizon="30d", is_training=False).iloc[-1]
         
@@ -291,6 +284,7 @@ def run_backtest(symbol: str) -> dict:
             "actionHolding": action_holding,
             "suggestedAllocation": allocation,
             "reasons": reasons,
+            "modelAccuracy": round(float(model_metrics.get("30d", {}).get("accuracy", 0)) * 100, 1),
             "winRate": round(float(win_rate) * 100, 1),
             "maxDrawdown": round(float(max_drawdown) * 100, 1),
             "strategySumReturn": round(float(total_strategy_return) * 100, 1),
