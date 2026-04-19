@@ -67,39 +67,54 @@ class FinancialScoringEngine:
         ts, tr = self._tl(d)
         return ScoringResult(d.symbol or "UNK", d.name or "Unknown", sk, p["label"], fs, self._gr(fs), self._gsug(fs), self._ga(fs), gs_list, ex, ts, tr, ca + sum(e.adjustment for e in ex), p.get("notes", ""))
 
+    def _calculate_group_score(self, name, weight, params):
+        # Filter out ignored parameters
+        active_params = [p for p in params if not p.is_ignored]
+        
+        if not active_params:
+            return GroupScore(name, weight, weight, 0, params)
+            
+        sum_earned = sum(p.earned_points for p in active_params)
+        sum_max = sum(p.max_points for p in active_params)
+        
+        # Normalize: (Earned / Max Available) * Group Weight
+        normalized_earned = (sum_earned / sum_max) * weight if sum_max > 0 else 0
+        
+        return GroupScore(name, weight, weight, round(normalized_earned, 2), params)
+
     def _sp(self, d, w, ign): # Profitability
         pts = [self._scm("roe", d.roe, ign, 10, lambda v: 10 if v>=20 else 7 if v>=15 else 4 if v>=10 else 2 if v>=5 else 0, lambda v, s: f"ROE={v}%"),
                self._scm("roce", d.roce, ign, 8, lambda v: 8 if v>=20 else 6 if v>=15 else 3 if v>=10 else 0, lambda v, s: f"ROCE={v}%"),
                self._scm("pat_margin", d.pat_margin, ign, 7, lambda v: 7 if v>=20 else 5 if v>=15 else 3 if v>=10 else 0, lambda v, s: f"PAT={v}%")]
-        return GroupScore("Profitability", w, w, sum(p.earned_points for p in pts), pts)
+        return self._calculate_group_score("Profitability", w, pts)
 
     def _sg(self, d, w, ign): # Growth
         pts = [self._scm("sales_growth", d.sales_growth, ign, 10, lambda v: 10 if v>=20 else 7 if v>=10 else 4 if v>=5 else 0, lambda v, s: f"Sales={v}%"),
                self._scm("profit_growth", d.profit_growth, ign, 10, lambda v: 10 if v>=20 else 7 if v>=10 else 4 if v>=5 else 0, lambda v, s: f"Profit={v}%")]
-        return GroupScore("Growth", w, w, sum(p.earned_points for p in pts), pts)
+        return self._calculate_group_score("Growth", w, pts)
 
     def _sf(self, d, w, ign): # Health
         pts = [self._scm("debt_equity", d.debt_equity, ign, 10, lambda v: 10 if v<=0.1 else 8 if v<=0.3 else 5 if v<=0.5 else 3 if v<=1 else 0, lambda v, s: f"D/E={v}"),
                self._scm("cash", d.cash, ign, 5, lambda v: 5 if d.market_cap and v/d.market_cap > 0.3 else 2 if v else 0, lambda v, s: "Cash"),
                self._scm("enterprise_value", d.enterprise_value, ign, 5, lambda v: 5 if d.market_cap and v<d.market_cap else 1, lambda v, s: "EV/MCap")]
-        return GroupScore("Financial Health", w, w, sum(p.earned_points for p in pts), pts)
+        return self._calculate_group_score("Financial Health", w, pts)
 
     def _sv(self, d, w, ign): # Valuation
         pts = [self._scm("pe", d.pe, ign, 7, lambda v: 7 if 0<v<=15 else 5 if v<=25 else 3 if v<=40 else 0, lambda v, s: f"P/E={v}"),
                self._scm("pb", d.pb, ign, 5, lambda v: 5 if v<=1.5 else 3 if v<=5 else 0, lambda v, s: f"P/B={v}"),
                self._scm("ev_vs_mcap", d.market_cap, ign, 3, lambda v: 3 if d.enterprise_value and d.enterprise_value < v else 0, lambda v, s: "Net Cash")]
-        return GroupScore("Valuation", w, w, sum(p.earned_points for p in pts), pts)
+        return self._calculate_group_score("Valuation", w, pts)
 
     def _so(self, d, w, ign): # Ownership
         pts = [self._scm("promoter_holding", d.promoter_holding, ign, 5, lambda v: 5 if v>=50 else 3 if v>=35 else 0, lambda v, s: f"Promoter={v}%"),
                self._scm("pledged_shares", d.pledged_shares, ign, 3, lambda v: 3 if v<=1 else 0, lambda v, s: f"Pledged={v}%"),
                self._scm("promoter_holding_trend", d.promoter_holding_trend, ign, 2, lambda v: 2 if str(v).lower()=="increasing" else 1, lambda v, s: "Trend")]
-        return GroupScore("Ownership", w, w, sum(p.earned_points for p in pts), pts)
+        return self._calculate_group_score("Ownership", w, pts)
 
     def _se(self, d, w, ign): # Efficiency
-        pts = [self._scm("asset_turnover", d.asset_turnover, ign, 5, lambda v: 5 if v>=2 else 3 if v>=1 else 0, lambda v, s: f"Turnover={v}x"),
+        pts = [self._scm("asset_turnover", d.asset_turnover, ign, 10, lambda v: 5 if v>=2 else 3 if v>=1 else 0, lambda v, s: f"Turnover={v}x"),
                self._scm("cash_cycle", d.cash_cycle, ign, 5, lambda v: 5 if v<0 else 3 if v<=60 else 0, lambda v, s: f"Cycle={v}d")]
-        return GroupScore("Efficiency", w, w, sum(p.earned_points for p in pts), pts)
+        return self._calculate_group_score("Efficiency", w, pts)
 
     def _dc(self, d): # Dividend Context
         if d.dividend_yield is None or d.sales_growth is None: return 0
@@ -121,8 +136,7 @@ class FinancialScoringEngine:
     def _ga(self, s): return "40-50%" if s>=80 else "25-35%" if s>=65 else "10-20%" if s>=50 else "0%"
 
     def _scm(self, n, v, ign, mp, sc, re): # Parameter scoring
-        if n in ign: return ParameterScore(n, v, mp, 0, "Ignored", True)
-        if v is None: return ParameterScore(n, None, mp, 0, "N/A")
+        if n in ign or v is None: return ParameterScore(n, v, mp, 0, "Ignored" if n in ign else "N/A", True)
         pts = min(sc(v), mp)
         return ParameterScore(n, v, mp, pts, re(v, pts))
 

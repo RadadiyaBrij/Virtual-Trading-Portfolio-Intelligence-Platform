@@ -38,14 +38,14 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-[100] bg-black/80 backdrop-blur-xl border-b border-white/5">
+    <nav className="sticky top-0 z-100 bg-black/80 backdrop-blur-xl border-b border-white/5">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         <div className="flex items-center gap-12">
           <Link to="/" className="flex items-center gap-2 group">
             <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
               <span className="text-white font-black text-xl leading-none">C</span>
             </div>
-            <span className="text-lg font-bold tracking-tight text-white uppercase tracking-widest">Capital Terminal</span>
+            <span className="text-lg font-bold tracking-tight text-white uppercase">Capital Terminal</span>
           </Link>
 
           <div className="hidden lg:flex items-center space-x-1">
