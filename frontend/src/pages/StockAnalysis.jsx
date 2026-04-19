@@ -447,14 +447,19 @@ export default function StockAnalysis() {
                         {mlAnalysis.riskLevel}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center pt-3 border-t border-gray-800">
-                      <span className="text-sm text-gray-400">Suggested Allocation</span>
-                      <span className="text-sm font-bold text-blue-400">{mlAnalysis.suggestedAllocation}</span>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center pb-3 border-b border-gray-800/50">
+                        <span className="text-sm text-gray-400">ML Model Accuracy</span>
+                        <span className="text-sm font-bold text-purple-400">{mlAnalysis.modelAccuracy}%</span>
+                      </div>
+                      <div className="flex justify-between items-center pb-3 border-b border-gray-800/50">
+                        <span className="text-sm text-gray-400">Suggested Allocation</span>
+                        <span className="text-sm font-bold text-blue-400">{mlAnalysis.suggestedAllocation}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                {/* Middle Column: Signal Breakdown & Expected Returns */}
+        {/* Middle Column: Signal Breakdown & Expected Returns */}
                 <div className="lg:col-span-1 space-y-4">
                   <div className="p-5 rounded-xl bg-gray-900/60 border border-gray-800">
                     <h4 className="text-sm font-bold text-gray-200 mb-4 flex items-center gap-2">

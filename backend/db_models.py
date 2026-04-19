@@ -30,6 +30,7 @@ class TransactionLog(Base):
     price_per_share_local = Column(Float) # The price in foreign/local currency
     exchange_rate_applied = Column(Float) # E.g.  for USD->INR
     total_value_inr = Column(Float) # The definitive deduction from the wallet
+    profit_loss_inr = Column(Float, nullable=True) # Realized profit/loss for this transaction
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
 
 class StockScoreCache(Base):

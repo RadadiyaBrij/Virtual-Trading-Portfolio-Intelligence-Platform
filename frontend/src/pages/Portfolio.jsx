@@ -5,6 +5,7 @@ import { FiTrendingUp, FiTrendingDown, FiPieChart, FiDollarSign } from 'react-ic
 export default function Portfolio() {
   const [profile, setProfile] = useState(null);
   const [holdings, setHoldings] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -27,6 +28,10 @@ export default function Portfolio() {
       const portfolioRes = await fetch('http://127.0.0.1:8000/portfolio', { headers });
       const portfolioData = await portfolioRes.json();
       setHoldings(portfolioData);
+
+      const txRes = await fetch('http://127.0.0.1:8000/transactions', { headers });
+      const txData = await txRes.json();
+      setTransactions(txData);
     } catch (err) {
       setError("Failed to fetch portfolio data.");
     } finally {
@@ -40,6 +45,30 @@ export default function Portfolio() {
 
   const totalValue = holdings.reduce((acc, curr) => acc + curr.value, 0);
   const totalProfit = holdings.reduce((acc, curr) => acc + curr.profit, 0);
+
+  const handleSell = async (symbol, qty, currentPrice) => {
+    if (!window.confirm(`Are you sure you want to sell ${qty} shares of ${symbol}?`)) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('http://127.0.0.1:8000/trade/sell', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ symbol, quantity: qty, price: currentPrice })
+      });
+      if (!res.ok) {
+        const errorData = await res.json();
+        alert(`Sell Failed: ${errorData.detail}`);
+      } else {
+        alert("Sold successfully!");
+        fetchPortfolio();
+      }
+    } catch (e) {
+      alert("Error processing sale.");
+    }
+  };
 
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-gray-500 font-medium">Loading portfolio...</div>;
   if (error) return <div className="min-h-screen bg-black flex items-center justify-center text-red-400">{error}</div>;
@@ -95,6 +124,7 @@ export default function Portfolio() {
                   <th className="px-6 py-4">Current Price</th>
                   <th className="px-6 py-4">Value</th>
                   <th className="px-6 py-4">P/L</th>
+                  <th className="px-6 py-4">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-sm">
@@ -108,11 +138,65 @@ export default function Portfolio() {
                     <td className={`px-6 py-5 font-bold ${h.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                       {h.profit >= 0 ? '+' : ''}₹{h.profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
+                    <td className="px-6 py-5">
+                      <button 
+                        onClick={() => handleSell(h.symbol, h.quantity, h.currentPrice)}
+                        className="bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white px-4 py-2 rounded-lg text-xs font-bold transition-colors"
+                      >
+                        SELL ALL
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {holdings.length === 0 && (
                   <tr>
                     <td colSpan="6" className="px-6 py-16 text-center text-gray-500">Your portfolio is currently empty. Start trading to see holdings.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/*  Transaction History  */}
+        <div className="mt-12 bg-gray-950/40 border border-blue-800 rounded-3xl overflow-hidden shadow-2xl">
+          <div className="p-6 border-b border-blue-800">
+            <h2 className="text-xl font-bold text-gray-200">Transaction History</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left whitespace-nowrap">
+              <thead className="bg-white/2 text-gray-400 text-[10px] font-black uppercase tracking-widest">
+                <tr>
+                  <th className="px-6 py-4">Date</th>
+                  <th className="px-6 py-4">Symbol</th>
+                  <th className="px-6 py-4">Action</th>
+                  <th className="px-6 py-4">Quantity</th>
+                  <th className="px-6 py-4">Price / Share</th>
+                  <th className="px-6 py-4">Total Value</th>
+                  <th className="px-6 py-4">P/L</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 text-sm">
+                {transactions.map((tx) => (
+                  <tr key={tx.id} className="hover:bg-white/2 transition-colors">
+                    <td className="px-6 py-5 text-gray-400">{new Date(tx.timestamp).toLocaleString()}</td>
+                    <td className="px-6 py-5 font-bold text-gray-200">{tx.symbol}</td>
+                    <td className={`px-6 py-5 font-bold ${tx.action === 'BUY' ? 'text-blue-400' : 'text-red-400'}`}>{tx.action}</td>
+                    <td className="px-6 py-5 text-gray-300">{tx.quantity}</td>
+                    <td className="px-6 py-5 text-gray-300">{tx.price_per_share_local.toFixed(2)}</td>
+                    <td className="px-6 py-5 font-bold text-gray-200">₹{tx.total_value_inr.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td className={`px-6 py-5 font-bold ${tx.profit_loss_inr > 0 ? 'text-green-400' : (tx.profit_loss_inr < 0 ? 'text-red-400' : 'text-gray-500')}`}>
+                      {tx.action === 'SELL' && tx.profit_loss_inr !== null ? (
+                        `${tx.profit_loss_inr > 0 ? '+' : ''}₹${tx.profit_loss_inr.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                      ) : (
+                        '-'
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {transactions.length === 0 && (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-16 text-center text-gray-500">No transaction history.</td>
                   </tr>
                 )}
               </tbody>

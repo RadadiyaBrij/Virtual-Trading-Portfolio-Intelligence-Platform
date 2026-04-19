@@ -299,7 +299,12 @@ def buy_stock(trade: dict, user=Depends(verify_user), db: Session = Depends(get_
     else:
         holding = PortfolioHolding(user_id=user.id, symbol=symbol, quantity=quantity, average_buy_price_inr=(total_cost/quantity))
         db.add(holding)
-    db.add(TransactionLog(user_id=user.id, symbol=symbol, action="BUY", quantity=quantity, price_per_share_local=price, exchange_rate_applied=rate, total_value_inr=total_cost))
+    db.add(TransactionLog(
+        user_id=user.id, symbol=symbol, action="BUY", 
+        quantity=quantity, price_per_share_local=price, 
+        exchange_rate_applied=rate, total_value_inr=total_cost,
+        profit_loss_inr=0.0
+    ))
     db.commit()
     return {"status": "success", "new_balance": wallet.balance_inr}
 
@@ -315,9 +320,20 @@ def sell_stock(trade: dict, user=Depends(verify_user), db: Session = Depends(get
     total_gain = quantity * price * rate
     wallet = db.query(UserWallet).filter(UserWallet.user_id == user.id).first()
     wallet.balance_inr += total_gain
+    
+    # Calculate realized profit/loss for this sell transaction
+    avg_buy_price = holding.average_buy_price_inr
+    profit_loss = (price * rate - avg_buy_price) * quantity
+    
     holding.quantity -= quantity
     if holding.quantity == 0: db.delete(holding)
-    db.add(TransactionLog(user_id=user.id, symbol=symbol, action="SELL", quantity=quantity, price_per_share_local=price, exchange_rate_applied=rate, total_value_inr=total_gain))
+    
+    db.add(TransactionLog(
+        user_id=user.id, symbol=symbol, action="SELL", 
+        quantity=quantity, price_per_share_local=price, 
+        exchange_rate_applied=rate, total_value_inr=total_gain,
+        profit_loss_inr=profit_loss
+    ))
     db.commit()
     return {"status": "success", "new_balance": wallet.balance_inr}
 
@@ -332,5 +348,6 @@ def get_transactions(user=Depends(verify_user), db: Session = Depends(get_db)):
         "price_per_share_local": log.price_per_share_local,
         "exchange_rate_applied": log.exchange_rate_applied,
         "total_value_inr": log.total_value_inr,
+        "profit_loss_inr": log.profit_loss_inr,
         "timestamp": log.timestamp.isoformat()
     } for log in logs]
