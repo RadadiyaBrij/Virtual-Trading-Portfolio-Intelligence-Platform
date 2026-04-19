@@ -222,6 +222,13 @@ def get_stock_analysis(symbol: str):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+@app.get("/stocks/{symbol}/backtest")
+def get_stock_backtest(symbol: str):
+    try:
+        from services.backtest_engine import run_backtest
+        return run_backtest(symbol)
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.get("/stocks/{symbol}/chart")
 def get_stock_chart(symbol: str, range: str = Query("1M")):
