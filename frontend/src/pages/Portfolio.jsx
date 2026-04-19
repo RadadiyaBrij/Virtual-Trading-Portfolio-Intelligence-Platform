@@ -44,7 +44,9 @@ export default function Portfolio() {
   }, []);
 
   const totalValue = holdings.reduce((acc, curr) => acc + curr.value, 0);
-  const totalProfit = holdings.reduce((acc, curr) => acc + curr.profit, 0);
+  
+  // All-time profit/loss = (Available Cash + Value of Current Holdings) - Starting Balance (1,000,000)
+  const allTimeProfit = profile ? (profile.balance + totalValue) - 1000000 : 0;
 
   const handleSell = async (symbol, qty, currentPrice) => {
     if (!window.confirm(`Are you sure you want to sell ${qty} shares of ${symbol}?`)) return;
@@ -98,13 +100,13 @@ export default function Portfolio() {
           
           <div className="bg-gray-950/40 border border-blue-800 p-6 rounded-3xl">
             <div className="flex items-center gap-3 text-gray-400 mb-2">
-              <div className={`p-2 rounded-lg ${totalProfit >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                {totalProfit >= 0 ? <FiTrendingUp /> : <FiTrendingDown />}
+              <div className={`p-2 rounded-lg ${allTimeProfit >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                {allTimeProfit >= 0 ? <FiTrendingUp /> : <FiTrendingDown />}
               </div>
-              <span className="uppercase text-[10px] font-black tracking-widest">Net Profit/Loss</span>
+              <span className="uppercase text-[10px] font-black tracking-widest">All-Time Net P/L</span>
             </div>
-            <div className={`text-3xl font-bold tracking-tight ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {totalProfit >= 0 ? '+' : ''}₹{totalProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            <div className={`text-3xl font-bold tracking-tight ${allTimeProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+              {allTimeProfit >= 0 ? '+' : ''}₹{allTimeProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </div>
           </div>
         </div>
@@ -120,7 +122,7 @@ export default function Portfolio() {
                 <tr>
                   <th className="px-6 py-4">Symbol</th>
                   <th className="px-6 py-4">Quantity</th>
-                  <th className="px-6 py-4">Avg Price</th>
+                  <th className="px-6 py-4">Buy Price</th>
                   <th className="px-6 py-4">Current Price</th>
                   <th className="px-6 py-4">Value</th>
                   <th className="px-6 py-4">P/L</th>
@@ -171,7 +173,8 @@ export default function Portfolio() {
                   <th className="px-6 py-4">Symbol</th>
                   <th className="px-6 py-4">Action</th>
                   <th className="px-6 py-4">Quantity</th>
-                  <th className="px-6 py-4">Price / Share</th>
+                  <th className="px-6 py-4">Buy Price</th>
+                  <th className="px-6 py-4">Sell Price</th>
                   <th className="px-6 py-4">Total Value</th>
                   <th className="px-6 py-4">P/L</th>
                 </tr>
@@ -183,7 +186,14 @@ export default function Portfolio() {
                     <td className="px-6 py-5 font-bold text-gray-200">{tx.symbol}</td>
                     <td className={`px-6 py-5 font-bold ${tx.action === 'BUY' ? 'text-blue-400' : 'text-red-400'}`}>{tx.action}</td>
                     <td className="px-6 py-5 text-gray-300">{tx.quantity}</td>
-                    <td className="px-6 py-5 text-gray-300">{tx.price_per_share_local.toFixed(2)}</td>
+                    <td className="px-6 py-5 text-gray-300">
+                      {tx.action === 'BUY' 
+                        ? tx.price_per_share_local.toFixed(2) 
+                        : (tx.reference_buy_price_inr ? tx.reference_buy_price_inr.toFixed(2) : '-')}
+                    </td>
+                    <td className="px-6 py-5 text-gray-300">
+                      {tx.action === 'SELL' ? tx.price_per_share_local.toFixed(2) : '-'}
+                    </td>
                     <td className="px-6 py-5 font-bold text-gray-200">₹{tx.total_value_inr.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     <td className={`px-6 py-5 font-bold ${tx.profit_loss_inr > 0 ? 'text-green-400' : (tx.profit_loss_inr < 0 ? 'text-red-400' : 'text-gray-500')}`}>
                       {tx.action === 'SELL' && tx.profit_loss_inr !== null ? (

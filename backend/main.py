@@ -332,6 +332,7 @@ def sell_stock(trade: dict, user=Depends(verify_user), db: Session = Depends(get
         user_id=user.id, symbol=symbol, action="SELL", 
         quantity=quantity, price_per_share_local=price, 
         exchange_rate_applied=rate, total_value_inr=total_gain,
+        reference_buy_price_inr=avg_buy_price,
         profit_loss_inr=profit_loss
     ))
     db.commit()
@@ -348,6 +349,7 @@ def get_transactions(user=Depends(verify_user), db: Session = Depends(get_db)):
         "price_per_share_local": log.price_per_share_local,
         "exchange_rate_applied": log.exchange_rate_applied,
         "total_value_inr": log.total_value_inr,
+        "reference_buy_price_inr": log.reference_buy_price_inr,
         "profit_loss_inr": log.profit_loss_inr,
         "timestamp": log.timestamp.isoformat()
     } for log in logs]
