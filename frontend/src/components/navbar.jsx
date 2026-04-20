@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { FiChevronDown, FiMenu, FiX, FiLogOut, FiPieChart, FiActivity, FiGlobe } from 'react-icons/fi';
+import { FiChevronDown, FiMenu, FiX, FiLogOut, FiPieChart, FiActivity, FiGlobe, FiUser } from 'react-icons/fi';
 
 export default function Navbar() {
   const [session, setSession] = useState(null);
@@ -38,14 +38,16 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-100 bg-black/80 backdrop-blur-xl border-b border-white/5">
+    <nav className="fixed top-0 w-full z-50 bg-black/30 backdrop-blur-md border-b border-white/5">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         <div className="flex items-center gap-12">
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-              <span className="text-white font-black text-xl leading-none">C</span>
-            </div>
-            <span className="text-lg font-bold tracking-tight text-white uppercase">Capital Terminal</span>
+          <Link to="/" className="flex items-center gap-3 group">
+            <img 
+              src="/bull-with-chart-bar-logo-design-finance-logo-design-vector-removebg-preview.png" 
+              alt="Logo" 
+              className="w-20 h-20 group-hover:scale-110 transition-transform duration-300 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+            />
+            <span className="text-lg font-black font-serif tracking-tight text-blue-400 uppercase">TradeMind Quant</span>
           </Link>
 
           <div className="hidden lg:flex items-center space-x-1">
@@ -66,16 +68,28 @@ export default function Navbar() {
               </div>
             </div>
             <NavLink to="/portfolio" icon={FiPieChart}>Portfolio</NavLink>
+            <NavLink to="/profile" icon={FiUser}>Profile</NavLink>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
           {session ? (
             <div className="flex items-center gap-4">
-              <div className="hidden sm:flex flex-col items-end">
-                <span className="text-xs font-semibold text-white truncate max-w-[150px]">{session.user.email.split('@')[0]}</span>
+              <Link to="/profile" className="hidden sm:flex flex-col items-end group">
+                <span className="text-sm font-semibold text-white truncate max-w-[150px] group-hover:text-blue-400 transition-colors">
+                  {session.user.user_metadata?.username || session.user.email.split('@')[0]}
+                </span>
                 <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Active Member</span>
-              </div>
+              </Link>
+              
+              <Link 
+                to="/profile"
+                className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 hover:border-blue-400/20 transition-all sm:hidden"
+                title="My Profile"
+              >
+                <FiUser size={18} />
+              </Link>
+
               <button 
                 onClick={handleLogout}
                 className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-gray-400 hover:text-red-400 hover:bg-red-400/10 hover:border-red-400/20 transition-all"
