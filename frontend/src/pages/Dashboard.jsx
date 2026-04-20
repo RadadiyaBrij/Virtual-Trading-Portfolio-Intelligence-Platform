@@ -21,7 +21,6 @@ export default function Dashboard() {
 
                {/* --- Hero Header --- */}
                <div className="mb-20 mt-12 flex flex-col items-center text-center">
-                  
                   <h1 className="text-6xl md:text-8xl font-black font-serif tracking-tighter mb-6 text-transparent bg-clip-text bg-linear-to-b from-white via-gray-200 to-gray-500 drop-shadow-2xl">
                      Welcome
                   </h1>

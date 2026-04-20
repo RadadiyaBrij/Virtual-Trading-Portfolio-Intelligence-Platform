@@ -193,7 +193,7 @@ export default function StockAnalysis() {
         const data = await analysisRes.json();
         if (data.status === 'error') throw new Error(data.message);
         setAnalysis(data);
-        
+
         try {
           setMlLoading(true);
           const mlRes = await fetch(`http://127.0.0.1:8000/stocks/${symbol}/backtest`);
@@ -322,7 +322,7 @@ export default function StockAnalysis() {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest"><FiInfo className="inline mr-1 text-blue-500" /> Analysis Context</h3>
                 </div>
-                
+
                 <div className="flex-1 space-y-4">
                   <div>
                     <span className="text-xs text-gray-500 block mb-1">Sector Profile</span>
@@ -426,170 +426,170 @@ export default function StockAnalysis() {
             Quantitative AI System (30-Day Horizon)
           </h2>
           {mlLoading ? (
-             <div className="p-6 rounded-2xl bg-gray-900/60 border border-gray-800 text-center text-gray-400 animate-pulse">Running 3 Independent ML Pipelines (1D, 7D, 30D)...</div>
+            <div className="p-6 rounded-2xl bg-gray-900/60 border border-gray-800 text-center text-gray-400 animate-pulse">Running 3 Independent ML Pipelines (1D, 7D, 30D)...</div>
           ) : mlAnalysis ? (
-             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {/* Left Column: Final Signal & Risk Level */}
-                <div className="lg:col-span-1 space-y-4">
-                  <div className="p-6 rounded-2xl bg-linear-to-br from-gray-900 to-gray-950 border border-gray-800 text-center relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-2">FINAL STRATEGY SIGNAL</span>
-                    <h3 className={`text-4xl font-black mb-1 ${['BUY', 'BUY DIP'].includes(mlAnalysis.finalSignal) ? 'text-green-400' : mlAnalysis.finalSignal === 'AVOID' ? 'text-red-400' : 'text-yellow-400'}`}>
-                      {mlAnalysis.finalSignal} {['BUY', 'BUY DIP'].includes(mlAnalysis.finalSignal) ? '🚀' : ''}
-                    </h3>
-                  </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                  <div className="p-5 rounded-xl bg-gray-900/60 border border-gray-800 space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-400">Risk Level</span>
-                      <span className={`text-sm font-bold ${mlAnalysis.riskLevel === 'LOW' ? 'text-green-400' : mlAnalysis.riskLevel === 'MEDIUM' ? 'text-yellow-400' : 'text-red-400'}`}>
-                        {mlAnalysis.riskLevel}
-                      </span>
+              {/* Left Column: Final Signal & Risk Level */}
+              <div className="lg:col-span-1 space-y-4">
+                <div className="p-6 rounded-2xl bg-linear-to-br from-gray-900 to-gray-950 border border-gray-800 text-center relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-2">FINAL STRATEGY SIGNAL</span>
+                  <h3 className={`text-4xl font-black mb-1 ${['BUY', 'BUY DIP'].includes(mlAnalysis.finalSignal) ? 'text-green-400' : mlAnalysis.finalSignal === 'AVOID' ? 'text-red-400' : 'text-yellow-400'}`}>
+                    {mlAnalysis.finalSignal} {['BUY', 'BUY DIP'].includes(mlAnalysis.finalSignal) ? '🚀' : ''}
+                  </h3>
+                </div>
+
+                <div className="p-5 rounded-xl bg-gray-900/60 border border-gray-800 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-400">Risk Level</span>
+                    <span className={`text-sm font-bold ${mlAnalysis.riskLevel === 'LOW' ? 'text-green-400' : mlAnalysis.riskLevel === 'MEDIUM' ? 'text-yellow-400' : 'text-red-400'}`}>
+                      {mlAnalysis.riskLevel}
+                    </span>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center pb-3 border-b border-gray-800/50">
+                      <span className="text-sm text-gray-400">ML Model Accuracy</span>
+                      <span className="text-sm font-bold text-purple-400">{mlAnalysis.modelAccuracy}%</span>
                     </div>
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center pb-3 border-b border-gray-800/50">
-                        <span className="text-sm text-gray-400">ML Model Accuracy</span>
-                        <span className="text-sm font-bold text-purple-400">{mlAnalysis.modelAccuracy}%</span>
-                      </div>
-                      <div className="flex justify-between items-center pb-3 border-b border-gray-800/50">
-                        <span className="text-sm text-gray-400">Suggested Allocation</span>
-                        <span className="text-sm font-bold text-blue-400">{mlAnalysis.suggestedAllocation}</span>
-                      </div>
+                    <div className="flex justify-between items-center pb-3 border-b border-gray-800/50">
+                      <span className="text-sm text-gray-400">Suggested Allocation</span>
+                      <span className="text-sm font-bold text-blue-400">{mlAnalysis.suggestedAllocation}</span>
                     </div>
                   </div>
                 </div>
-        {/* Middle Column: Signal Breakdown & Expected Returns */}
-                <div className="lg:col-span-1 space-y-4">
-                  <div className="p-5 rounded-xl bg-gray-900/60 border border-gray-800">
-                    <h4 className="text-sm font-bold text-gray-200 mb-4 flex items-center gap-2">
-                      <FiActivity className="text-blue-400" /> Signal Breakdown
-                    </h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-300">1-Day (Short-term):</span>
-                        <strong className={mlAnalysis.multiHorizon?.['1d']?.signal === 'BUY' ? 'text-green-400' : 'text-red-400'}>{mlAnalysis.multiHorizon?.['1d']?.signal} {mlAnalysis.multiHorizon?.['1d']?.signal === 'BUY' ? '🟢' : '🔴'}</strong>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-300">7-Day (Mid-term):</span>
-                        <strong className={mlAnalysis.multiHorizon?.['7d']?.signal === 'BUY' ? 'text-green-400' : 'text-red-400'}>{mlAnalysis.multiHorizon?.['7d']?.signal} {mlAnalysis.multiHorizon?.['7d']?.signal === 'BUY' ? '🟢' : '🔴'}</strong>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-300">30-Day (Long-term):</span>
-                        <strong className={mlAnalysis.multiHorizon?.['30d']?.signal === 'BUY' ? 'text-green-400' : 'text-red-400'}>{mlAnalysis.multiHorizon?.['30d']?.signal} {mlAnalysis.multiHorizon?.['30d']?.signal === 'BUY' ? '🟢' : '🔴'}</strong>
-                      </div>
+              </div>
+              {/* Middle Column: Signal Breakdown & Expected Returns */}
+              <div className="lg:col-span-1 space-y-4">
+                <div className="p-5 rounded-xl bg-gray-900/60 border border-gray-800">
+                  <h4 className="text-sm font-bold text-gray-200 mb-4 flex items-center gap-2">
+                    <FiActivity className="text-blue-400" /> Signal Breakdown
+                  </h4>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-300">1-Day (Short-term):</span>
+                      <strong className={mlAnalysis.multiHorizon?.['1d']?.signal === 'BUY' ? 'text-green-400' : 'text-red-400'}>{mlAnalysis.multiHorizon?.['1d']?.signal} {mlAnalysis.multiHorizon?.['1d']?.signal === 'BUY' ? '🟢' : '🔴'}</strong>
                     </div>
-                    <div className="mt-4 p-2 rounded bg-yellow-500/10 border border-yellow-500/20 text-xs text-yellow-400 flex items-center gap-2">
-                      <span>⚠️</span> <span>Short-term opportunity (higher risk)</span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-300">7-Day (Mid-term):</span>
+                      <strong className={mlAnalysis.multiHorizon?.['7d']?.signal === 'BUY' ? 'text-green-400' : 'text-red-400'}>{mlAnalysis.multiHorizon?.['7d']?.signal} {mlAnalysis.multiHorizon?.['7d']?.signal === 'BUY' ? '🟢' : '🔴'}</strong>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-300">30-Day (Long-term):</span>
+                      <strong className={mlAnalysis.multiHorizon?.['30d']?.signal === 'BUY' ? 'text-green-400' : 'text-red-400'}>{mlAnalysis.multiHorizon?.['30d']?.signal} {mlAnalysis.multiHorizon?.['30d']?.signal === 'BUY' ? '🟢' : '🔴'}</strong>
                     </div>
                   </div>
-
-                  <div className="p-5 rounded-xl bg-gray-900/60 border border-gray-800">
-                    <h4 className="text-sm font-bold text-gray-200 mb-4 flex items-center gap-2">
-                      <FiDollarSign className="text-green-400" /> Expected Returns (Multi-Horizon)
-                    </h4>
-                    <div className="space-y-4">
-                      <div>
-                        <span className="text-sm text-gray-300 font-semibold">1-Day (Short-term):</span>
-                        <div className="ml-2 mt-1">
-                          <p className="text-xs text-gray-400">→ Range: <span className="font-mono text-green-400">{mlAnalysis.multiHorizon?.['1d']?.expectedReturn}</span></p>
-                          <p className="text-xs text-gray-400">→ Confidence: <span className={mlAnalysis.multiHorizon?.['1d']?.confidence === 'HIGH' ? 'text-green-400' : mlAnalysis.multiHorizon?.['1d']?.confidence === 'MEDIUM' ? 'text-yellow-400' : 'text-red-400'}>{mlAnalysis.multiHorizon?.['1d']?.confidence} {mlAnalysis.multiHorizon?.['1d']?.confidence === 'LOW' && '⚠️'}</span></p>
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-sm text-gray-300 font-semibold">7-Day (Swing):</span>
-                        <div className="ml-2 mt-1">
-                          <p className="text-xs text-gray-400">→ Range: <span className="font-mono text-green-400">{mlAnalysis.multiHorizon?.['7d']?.expectedReturn}</span></p>
-                          <p className="text-xs text-gray-400">→ Confidence: <span className={mlAnalysis.multiHorizon?.['7d']?.confidence === 'HIGH' ? 'text-green-400' : mlAnalysis.multiHorizon?.['7d']?.confidence === 'MEDIUM' ? 'text-yellow-400' : 'text-red-400'}>{mlAnalysis.multiHorizon?.['7d']?.confidence}</span></p>
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-sm text-gray-300 font-semibold">30-Day (Primary):</span>
-                        <div className="ml-2 mt-1">
-                          <p className="text-xs text-gray-400">→ Range: <span className="font-mono text-green-400">{mlAnalysis.multiHorizon?.['30d']?.expectedReturn}</span></p>
-                          <p className="text-xs text-gray-400">→ Confidence: <span className={mlAnalysis.multiHorizon?.['30d']?.confidence === 'HIGH' ? 'text-green-400' : mlAnalysis.multiHorizon?.['30d']?.confidence === 'MEDIUM' ? 'text-yellow-400' : 'text-red-400'}>{mlAnalysis.multiHorizon?.['30d']?.confidence}</span></p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4 p-2 rounded bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400 flex items-center gap-2">
-                      <span>⚠️</span> <span>Estimated range, not guaranteed</span>
-                    </div>
+                  <div className="mt-4 p-2 rounded bg-yellow-500/10 border border-yellow-500/20 text-xs text-yellow-400 flex items-center gap-2">
+                    <span>⚠️</span> <span>Short-term opportunity (higher risk)</span>
                   </div>
                 </div>
 
-                {/* Right Column: Why this signal (Explainability) & Performance */}
-                <div className="lg:col-span-1 space-y-4">
-                  <div className="p-5 rounded-xl bg-gray-900/60 border border-gray-800">
-                    <h4 className="text-sm font-bold text-gray-200 mb-3 flex items-center gap-2">
-                      <FiZap className="text-purple-400" /> Reason (Why this signal?)
-                    </h4>
-                    <ul className="space-y-2">
-                      {mlAnalysis.reasons?.map((reason, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-sm text-gray-400">
-                          <span className="text-green-500 mt-0.5">✔</span> {reason}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="p-5 rounded-xl bg-gray-900/60 border border-gray-800">
-                    <h4 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-3">Performance</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <span className="block text-xs text-gray-500 mb-1">Win Rate</span>
-                        <span className="text-sm font-bold text-white">{mlAnalysis.winRate}%</span>
+                <div className="p-5 rounded-xl bg-gray-900/60 border border-gray-800">
+                  <h4 className="text-sm font-bold text-gray-200 mb-4 flex items-center gap-2">
+                    <FiDollarSign className="text-green-400" /> Expected Returns (Multi-Horizon)
+                  </h4>
+                  <div className="space-y-4">
+                    <div>
+                      <span className="text-sm text-gray-300 font-semibold">1-Day (Short-term):</span>
+                      <div className="ml-2 mt-1">
+                        <p className="text-xs text-gray-400">→ Range: <span className="font-mono text-green-400">{mlAnalysis.multiHorizon?.['1d']?.expectedReturn}</span></p>
+                        <p className="text-xs text-gray-400">→ Confidence: <span className={mlAnalysis.multiHorizon?.['1d']?.confidence === 'HIGH' ? 'text-green-400' : mlAnalysis.multiHorizon?.['1d']?.confidence === 'MEDIUM' ? 'text-yellow-400' : 'text-red-400'}>{mlAnalysis.multiHorizon?.['1d']?.confidence} {mlAnalysis.multiHorizon?.['1d']?.confidence === 'LOW' && '⚠️'}</span></p>
                       </div>
-                      <div>
-                        <span className="block text-xs text-gray-500 mb-1">Max Drawdown</span>
-                        <span className="text-sm font-bold text-red-400">{mlAnalysis.maxDrawdown}%</span>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-300 font-semibold">7-Day (Swing):</span>
+                      <div className="ml-2 mt-1">
+                        <p className="text-xs text-gray-400">→ Range: <span className="font-mono text-green-400">{mlAnalysis.multiHorizon?.['7d']?.expectedReturn}</span></p>
+                        <p className="text-xs text-gray-400">→ Confidence: <span className={mlAnalysis.multiHorizon?.['7d']?.confidence === 'HIGH' ? 'text-green-400' : mlAnalysis.multiHorizon?.['7d']?.confidence === 'MEDIUM' ? 'text-yellow-400' : 'text-red-400'}>{mlAnalysis.multiHorizon?.['7d']?.confidence}</span></p>
                       </div>
-                      <div className="col-span-2 flex justify-between items-center">
-                        <span className="text-xs text-gray-500">Strategy vs Market</span>
-                        <span className="text-sm font-bold text-blue-400">{mlAnalysis.strategySumReturn}% <span className="text-gray-600 font-normal">vs</span> {mlAnalysis.buyAndHoldReturn}%</span>
-                      </div>
-                      <div className="col-span-2 pt-2 border-t border-gray-800 flex justify-between items-center">
-                        <span className="text-xs text-gray-500">Realistic Trades</span>
-                        <span className="text-sm font-mono text-gray-300">{mlAnalysis.tradesTaken}</span>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-300 font-semibold">30-Day (Primary):</span>
+                      <div className="ml-2 mt-1">
+                        <p className="text-xs text-gray-400">→ Range: <span className="font-mono text-green-400">{mlAnalysis.multiHorizon?.['30d']?.expectedReturn}</span></p>
+                        <p className="text-xs text-gray-400">→ Confidence: <span className={mlAnalysis.multiHorizon?.['30d']?.confidence === 'HIGH' ? 'text-green-400' : mlAnalysis.multiHorizon?.['30d']?.confidence === 'MEDIUM' ? 'text-yellow-400' : 'text-red-400'}>{mlAnalysis.multiHorizon?.['30d']?.confidence}</span></p>
                       </div>
                     </div>
                   </div>
+                  <div className="mt-4 p-2 rounded bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400 flex items-center gap-2">
+                    <span>⚠️</span> <span>Estimated range, not guaranteed</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Why this signal (Explainability) & Performance */}
+              <div className="lg:col-span-1 space-y-4">
+                <div className="p-5 rounded-xl bg-gray-900/60 border border-gray-800">
+                  <h4 className="text-sm font-bold text-gray-200 mb-3 flex items-center gap-2">
+                    <FiZap className="text-purple-400" /> Reason (Why this signal?)
+                  </h4>
+                  <ul className="space-y-2">
+                    {mlAnalysis.reasons?.map((reason, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm text-gray-400">
+                        <span className="text-green-500 mt-0.5">✔</span> {reason}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
-             </div>
+                <div className="p-5 rounded-xl bg-gray-900/60 border border-gray-800">
+                  <h4 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-3">Performance</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="block text-xs text-gray-500 mb-1">Win Rate</span>
+                      <span className="text-sm font-bold text-white">{mlAnalysis.winRate}%</span>
+                    </div>
+                    <div>
+                      <span className="block text-xs text-gray-500 mb-1">Max Drawdown</span>
+                      <span className="text-sm font-bold text-red-400">{mlAnalysis.maxDrawdown}%</span>
+                    </div>
+                    <div className="col-span-2 flex justify-between items-center">
+                      <span className="text-xs text-gray-500">Strategy vs Market</span>
+                      <span className="text-sm font-bold text-blue-400">{mlAnalysis.strategySumReturn}% <span className="text-gray-600 font-normal">vs</span> {mlAnalysis.buyAndHoldReturn}%</span>
+                    </div>
+                    <div className="col-span-2 pt-2 border-t border-gray-800 flex justify-between items-center">
+                      <span className="text-xs text-gray-500">Realistic Trades</span>
+                      <span className="text-sm font-mono text-gray-300">{mlAnalysis.tradesTaken}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           ) : (
-             <div className="p-6 rounded-2xl bg-gray-900/60 border border-gray-800 text-center text-gray-500">Backtest data unavailable.</div>
+            <div className="p-6 rounded-2xl bg-gray-900/60 border border-gray-800 text-center text-gray-500">Backtest data unavailable.</div>
           )}
         </section>
 
         {/* ── Action Matrix ── */}
         {mlAnalysis && !mlLoading && (
-        <section>
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-            <span className="w-1.5 h-6 bg-purple-500 rounded-full" />
-            Execution Action Matrix
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="p-6 rounded-2xl bg-linear-to-br from-gray-900 to-gray-950 border border-gray-800">
-               <h3 className="text-sm font-bold text-gray-400 mb-4 uppercase tracking-wider">If You DON'T Hold Shares</h3>
-               <div className="flex items-center justify-between mb-2">
-                 <span className={`text-3xl font-black ${['STRONG_BUY', 'BUY'].includes(mlAnalysis.actionNotHolding?.action) ? 'text-green-400' : mlAnalysis.actionNotHolding?.action === 'AVOID' ? 'text-red-400' : 'text-yellow-400'}`}>
-                   {mlAnalysis.actionNotHolding?.action?.replace('_', ' ')}
-                 </span>
-               </div>
-               <p className="text-sm text-gray-300 mt-3"><strong>Reason:</strong> {mlAnalysis.actionNotHolding?.reason}</p>
+          <section>
+            <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+              <span className="w-1.5 h-6 bg-purple-500 rounded-full" />
+              Execution Action Matrix
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-6 rounded-2xl bg-linear-to-br from-gray-900 to-gray-950 border border-gray-800">
+                <h3 className="text-sm font-bold text-gray-400 mb-4 uppercase tracking-wider">If You DON'T Hold Shares</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-3xl font-black ${['STRONG_BUY', 'BUY'].includes(mlAnalysis.actionNotHolding?.action) ? 'text-green-400' : mlAnalysis.actionNotHolding?.action === 'AVOID' ? 'text-red-400' : 'text-yellow-400'}`}>
+                    {mlAnalysis.actionNotHolding?.action?.replace('_', ' ')}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-300 mt-3"><strong>Reason:</strong> {mlAnalysis.actionNotHolding?.reason}</p>
+              </div>
+              <div className="p-6 rounded-2xl bg-linear-to-br from-gray-900 to-gray-950 border border-gray-800">
+                <h3 className="text-sm font-bold text-gray-400 mb-4 uppercase tracking-wider">If You CURRENTLY Hold Shares</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-3xl font-black ${['HOLD'].includes(mlAnalysis.actionHolding?.action) ? 'text-blue-400' : ['EXIT_ALL', 'PARTIAL_EXIT'].includes(mlAnalysis.actionHolding?.action) ? 'text-red-400' : 'text-yellow-400'}`}>
+                    {mlAnalysis.actionHolding?.action?.replace('_', ' ')}
+                    {mlAnalysis.actionHolding?.size && ` (${mlAnalysis.actionHolding.size})`}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-300 mt-3"><strong>Reason:</strong> {mlAnalysis.actionHolding?.reason}</p>
+              </div>
             </div>
-            <div className="p-6 rounded-2xl bg-linear-to-br from-gray-900 to-gray-950 border border-gray-800">
-               <h3 className="text-sm font-bold text-gray-400 mb-4 uppercase tracking-wider">If You CURRENTLY Hold Shares</h3>
-               <div className="flex items-center justify-between mb-2">
-                 <span className={`text-3xl font-black ${['HOLD'].includes(mlAnalysis.actionHolding?.action) ? 'text-blue-400' : ['EXIT_ALL', 'PARTIAL_EXIT'].includes(mlAnalysis.actionHolding?.action) ? 'text-red-400' : 'text-yellow-400'}`}>
-                   {mlAnalysis.actionHolding?.action?.replace('_', ' ')}
-                   {mlAnalysis.actionHolding?.size && ` (${mlAnalysis.actionHolding.size})`}
-                 </span>
-               </div>
-               <p className="text-sm text-gray-300 mt-3"><strong>Reason:</strong> {mlAnalysis.actionHolding?.reason}</p>
-            </div>
-          </div>
-        </section>
+          </section>
         )}
 
         {/* ── Fundamentals Grid ── */}

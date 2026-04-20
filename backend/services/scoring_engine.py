@@ -143,11 +143,41 @@ class FinancialScoringEngine:
 def extract_fundamentals_from_yfinance(symbol: str) -> StockFundamentals:
     import yfinance as yf
     t = yf.Ticker(symbol); i = t.info
+    is_usd = not (symbol.endswith('.NS') or symbol.endswith('.BO'))
+    ex = 83.0 if is_usd else 1.0
+
     def g(k, d=None):
         v = i.get(k, d)
         return d if v is None or (isinstance(v, float) and math.isnan(v)) else v
-    rev, ast, debt, eq = g("totalRevenue", 0), g("totalAssets", 0), g("totalDebt", 0), g("totalStockholderEquity", 0)
-    return StockFundamentals(roe=round(g("returnOnEquity",0)*100,2), pat_margin=round(g("profitMargins",0)*100,2), sales_growth=round(g("revenueGrowth",0)*100,2), profit_growth=round(g("earningsGrowth",0)*100,2), debt_equity=round(debt/eq, 2) if eq else None, cash=g("totalCash"), enterprise_value=g("enterpriseValue"), market_cap=g("marketCap"), pe=g("trailingPE"), pb=g("priceToBook"), dividend_yield=round(g("dividendYield",0)*100,2), sector=g("sector"), industry=g("industry"), symbol=symbol, name=g("shortName", symbol), eps=g("trailingEps"), book_value=g("bookValue"), asset_turnover=round(rev/ast, 2) if ast else None)
+    
+    rev, ast, debt, eq = g("totalRevenue", 0) * ex, g("totalAssets", 0) * ex, g("totalDebt", 0) * ex, g("totalStockholderEquity", 0) * ex
+    price = g("currentPrice", 0) * ex
+    mcap = g("marketCap", 0) * ex
+    cash = g("totalCash", 0) * ex
+    ev = g("enterpriseValue", 0) * ex
+    bv = g("bookValue", 0) * ex
+
+    return StockFundamentals(
+        roe=round(g("returnOnEquity", 0) * 100, 2),
+        pat_margin=round(g("profitMargins", 0) * 100, 2),
+        sales_growth=round(g("revenueGrowth", 0) * 100, 2),
+        profit_growth=round(g("earningsGrowth", 0) * 100, 2),
+        debt_equity=round(debt / eq, 2) if eq else None,
+        cash=cash,
+        enterprise_value=ev,
+        market_cap=mcap,
+        pe=g("trailingPE"),
+        pb=g("priceToBook"),
+        dividend_yield=round(g("dividendYield", 0) * 100, 2),
+        sector=g("sector"),
+        industry=g("industry"),
+        symbol=symbol,
+        name=g("shortName", symbol),
+        eps=g("trailingEps") * ex,
+        book_value=bv,
+        asset_turnover=round(rev / ast, 2) if ast else None,
+        current_price=price
+    )
 
 def analyze_stock(symbol: str) -> dict:
     f = extract_fundamentals_from_yfinance(symbol); res = FinancialScoringEngine().score(f)

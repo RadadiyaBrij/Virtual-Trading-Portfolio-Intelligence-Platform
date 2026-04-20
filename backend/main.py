@@ -61,15 +61,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def format_volume(vol):
-    if not vol: return "0"
-    if vol >= 1_000_000_000:
-        return f"{vol/1_000_000_000:.1f}B"
-    elif vol >= 1_000_000:
-        return f"{vol/1_000_000:.1f}M"
-    elif vol >= 1_000:
-        return f"{vol/1_000:.1f}K"
-    return str(vol)
+def format_volume(val, is_usd=False):
+    if not val: return "0"
+    num = float(val)
+    if is_usd:
+        num *= 83.0  # Convert USD to INR
+    
+    if num >= 10**7: # 1 Crore
+        return f"{num / 10**7:.2f} Cr"
+    if num >= 10**5: # 1 Lakh
+        return f"{num / 10**5:.2f} L"
+    return f"{num:,.0f}"
 
 @app.get("/auth/profile")
 def get_user_profile(user=Depends(verify_user), db: Session = Depends(get_db)):
@@ -151,20 +153,33 @@ def get_stocks_batch(symbols: str = Query(...)):
                                  success = True
                         except Exception: pass
                     if not success: continue
-                    change = current_price - prev_close
-                    change_percent = (change / prev_close) * 100 if prev_close else 0.0
-                    mcap_str = f"{(current_price * 1000):.1f}B" if sym.endswith('.NS') else "1.0T" 
+                    # Conversion and Formatting logic
+                    is_indian = sym.endswith('.NS') or sym.endswith('.BO')
+                    exchange_rate = 1.0 if is_indian else 83.0
+                    
+                    price_inr = current_price * exchange_rate
+                    prev_close_inr = prev_close * exchange_rate
+                    change_inr = price_inr - prev_close_inr
+                    change_percent = (change_inr / prev_close_inr) * 100 if prev_close_inr else 0.0
+                    mcap_value = current_price * 1000000 * exchange_rate 
+                    if mcap_value >= 10000000:
+                        mcap_str = f"{mcap_value / 10000000:.2f} Cr"
+                    elif mcap_value >= 100000:
+                        mcap_str = f"{mcap_value / 100000:.2f} L"
+                    else:
+                        mcap_str = f"{mcap_value:,.0f}"
+
                     results.append({
                         "symbol": sym.upper(),
-                        "name": sym.replace('.NS', '').replace('-', ' '),
-                        "price": round(current_price, 2),
-                        "previousClose": round(prev_close, 2),
-                        "change": round(float(change), 2),
+                        "name": sym.replace('.NS', '').replace('.BO', '').replace('-', ' '),
+                        "price": round(price_inr, 2),
+                        "previousClose": round(prev_close_inr, 2),
+                        "change": round(float(change_inr), 2),
                         "changePercent": round(float(change_percent), 2),
                         "volume": vol,
                         "formattedMarketCap": mcap_str,
-                        "isLoss": bool(change < 0),
-                        "sparkline": spark
+                        "isLoss": bool(change_inr < 0),
+                        "sparkline": [float(x * exchange_rate) for x in spark]
                     })
                 except Exception: continue
         except Exception: continue
@@ -187,26 +202,29 @@ def get_stock(symbol: str):
         company_news = []
     stock = yf.Ticker(symbol)
     data = stock.info
+    is_usd = not (symbol.endswith('.NS') or symbol.endswith('.BO'))
+    exchange_rate = 83.0 if is_usd else 1.0
+
     return {
         "symbol": symbol.upper(),
         "name": data.get("shortName", symbol),
-        "price": current_price if current_price else data.get("currentPrice", 0),
-        "change": round(change, 2) if change else 0,
+        "price": round((current_price if current_price else data.get("currentPrice", 0)) * exchange_rate, 2),
+        "change": round(change * exchange_rate, 2) if change else 0,
         "changePercent": round(change_percent, 2) if change_percent else 0,
-        "volume": format_volume(data.get("volume") or data.get("regularMarketVolume", 0)),
+        "volume": format_volume(data.get("volume") or data.get("regularMarketVolume", 0), is_usd),
         "isLoss": (change < 0) if change else False,
         "description": data.get("longBusinessSummary", "No description available."),
         "sector": data.get("sector", "N/A"),
         "industry": data.get("industry", "N/A"),
         "website": data.get("website", "#"),
-        "marketCap": format_volume(data.get("marketCap", 0)),
+        "marketCap": format_volume(data.get("marketCap", 0), is_usd),
         "dividendYield": round(data.get("dividendYield", 0) * 100, 2) if data.get("dividendYield") else "N/A",
         "trailingPE": round(data.get("trailingPE", 0), 2) if data.get("trailingPE") else "N/A",
         "forwardPE": round(data.get("forwardPE", 0), 2) if data.get("forwardPE") else "N/A",
-        "fiftyTwoWeekLow": data.get("fiftyTwoWeekLow", 0),
-        "fiftyTwoWeekHigh": data.get("fiftyTwoWeekHigh", 0),
-        "totalRevenue": format_volume(data.get("totalRevenue", 0)),
-        "netIncome": format_volume(data.get("netIncomeToCommon", 0)),
+        "fiftyTwoWeekLow": round(data.get("fiftyTwoWeekLow", 0) * exchange_rate, 2),
+        "fiftyTwoWeekHigh": round(data.get("fiftyTwoWeekHigh", 0) * exchange_rate, 2),
+        "totalRevenue": format_volume(data.get("totalRevenue", 0), is_usd),
+        "netIncome": format_volume(data.get("netIncomeToCommon", 0), is_usd),
         "city": data.get("city", "N/A"),
         "state": data.get("state", "N/A"),
         "country": data.get("country", "N/A"),
@@ -255,10 +273,12 @@ def get_stock_backtest(symbol: str, db: Session = Depends(get_db)):
 def get_stock_chart(symbol: str, range: str = Query("1M")):
     mapping = {"1D": ("1d", "5m"), "1W": ("5d", "15m"), "1M": ("1mo", "1d"), "1Y": ("1y", "1d")}
     period, interval = mapping.get(range.upper(), ("1mo", "1d"))
+    is_usd = not (symbol.endswith('.NS') or symbol.endswith('.BO'))
+    ex = 83.0 if is_usd else 1.0
     try:
         ticker = yf.Ticker(symbol)
         hist = ticker.history(period=period, interval=interval)
-        return [{"time": i.strftime("%b %d") if interval == "1d" else i.strftime("%H:%M %b %d"), "price": round(r['Close'], 2)} for i, r in hist.iterrows()]
+        return [{"time": i.strftime("%b %d") if interval == "1d" else i.strftime("%H:%M %b %d"), "price": round(r['Close'] * ex, 2)} for i, r in hist.iterrows()]
     except Exception: return []
 
 @app.get("/portfolio")
