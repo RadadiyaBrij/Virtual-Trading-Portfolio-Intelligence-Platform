@@ -547,10 +547,7 @@ export default function StockAnalysis() {
                       <span className="text-xs text-gray-500">Strategy vs Market</span>
                       <span className="text-sm font-bold text-blue-400">{mlAnalysis.strategySumReturn}% <span className="text-gray-600 font-normal">vs</span> {mlAnalysis.buyAndHoldReturn}%</span>
                     </div>
-                    <div className="col-span-2 pt-2 border-t border-gray-800 flex justify-between items-center">
-                      <span className="text-xs text-gray-500">Realistic Trades</span>
-                      <span className="text-sm font-mono text-gray-300">{mlAnalysis.tradesTaken}</span>
-                    </div>
+
                   </div>
                 </div>
               </div>
@@ -614,11 +611,8 @@ export default function StockAnalysis() {
             <MetricCard key="pb" label="P/B" value={f.pb} icon={<FiActivity />} subtext="Price to Book" />
             <MetricCard key="bv" label="Book Value" value={f.bookValue} icon={<FiDollarSign />} />
             <MetricCard key="div" label="Div Yield" value={f.dividendYield !== null ? `${f.dividendYield}%` : null} icon={<FiPieChart />} />
-            <MetricCard key="atp" label="Asset Turn." value={f.assetTurnover !== null ? `${f.assetTurnover}x` : null} icon={<FiZap />} />
-            <MetricCard key="prom" label="Promoter" value={f.promoterHolding !== null ? `${f.promoterHolding}%` : null} icon={<FiUsers />} />
-            <MetricCard key="pled" label="Pledged" value={f.pledgedShares !== null ? `${f.pledgedShares}%` : null} icon={<FiShield />} />
             <MetricCard key="price" label="Price" value={f.currentPrice} icon={<FiDollarSign />} subtext="Current" />
-            <MetricCard key="cc" label="Cash Cycle" value={f.cashCycle !== null ? `${f.cashCycle}d` : null} icon={<FiClock />} />
+
           </div>
         </section>
 
