@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FiRefreshCw } from 'react-icons/fi';
+import React, { useState, useEffect, useMemo } from 'react';
+import { FiRefreshCw, FiSearch } from 'react-icons/fi';
 import StockTableRow from '../components/market/StockTableRow';
 
 export default function Stocks() {
@@ -7,6 +7,7 @@ export default function Stocks() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [region, setRegion] = useState('india');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const nifty50Symbols = 'RELIANCE.NS,TCS.NS,HDFCBANK.NS,ICICIBANK.NS,BHARTIARTL.NS,INFY.NS,SBIN.NS,HINDUNILVR.NS,ITC.NS,LT.NS,BAJFINANCE.NS,HCLTECH.NS,MARUTI.NS,SUNPHARMA.NS,TMPV.NS,KOTAKBANK.NS,M&M.NS,ONGC.NS,NTPC.NS,TITAN.NS,ADANIPORTS.NS,ASIANPAINT.NS,ULTRACEMCO.NS,POWERGRID.NS,BAJAJFINSV.NS,WIPRO.NS,COALINDIA.NS,INDUSINDBK.NS,TATASTEEL.NS,GRASIM.NS,BAJAJ-AUTO.NS,TECHM.NS,HINDALCO.NS,ADANIENT.NS,CIPLA.NS,DRREDDY.NS,EICHERMOT.NS,DIVISLAB.NS,APOLLOHOSP.NS,TATACONSUM.NS,HEROMOTOCO.NS,BRITANNIA.NS,UPL.NS,SBILIFE.NS,HDFCLIFE.NS,BPCL.NS,SHREECEM.NS,HDFCAMC.NS,PIDILITIND.NS,VEDL.NS';
 
@@ -41,8 +42,16 @@ export default function Stocks() {
     return () => clearInterval(interval);
   }, [region]);
 
+  const filteredStocks = useMemo(() => {
+    if (!searchQuery) return stockData;
+    return stockData.filter(stock =>
+      stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (stock.company_name && stock.company_name.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [stockData, searchQuery]);
+
   return (
-    <div className="min-h-screen bg-black text-white p-6 md:p-10">
+    <div className="min-h-screen bg-black text-white p-6 md:p-10 pt-28 md:pt-32">
 
       <div className="max-w-7xl mx-auto flex flex-col gap-8 mt-4">
 
@@ -80,6 +89,20 @@ export default function Stocks() {
               <FiRefreshCw className={`w-4 h-4 relative z-10 ${loading ? "animate-spin text-blue-500" : "group-hover:rotate-180 transition-transform duration-300"}`} />
               <span className="text-[10px] font-black uppercase tracking-[0.2em] relative z-10">Refresh</span>
             </button>
+
+            {/* Search Bar */}
+            <div className="relative group ml-auto md:ml-4">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FiSearch className="text-gray-500 group-focus-within:text-blue-400 transition-colors" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search stocks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-gray-950/40 backdrop-blur-md border-2 border-blue-600/50 text-white text-sm rounded-2xl pl-10 pr-4 py-2.5 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all w-full md:w-64 placeholder-gray-500 shadow-xl"
+              />
+            </div>
           </div>
         </div>
 
@@ -107,13 +130,13 @@ export default function Stocks() {
               <p className="text-red-400 font-medium mb-2">{error}</p>
               <button onClick={fetchStocks} className="bg-red-500/20 hover:bg-red-500/40 text-red-300 px-4 py-2 rounded-md transition-colors text-sm">Retry Connection</button>
             </div>
-          ) : stockData.length === 0 ? (
+          ) : filteredStocks.length === 0 ? (
             <div className="py-20 text-center text-gray-500 border border-gray-800 rounded-xl bg-gray-900/10 mt-2">
-              <p className="text-xl font-medium mb-2">No stocks found.</p>
+              <p className="text-xl font-medium mb-2">No stocks found matching "{searchQuery}".</p>
             </div>
           ) : (
             <div className="flex flex-col">
-              {stockData.map((stock) => (
+              {filteredStocks.map((stock) => (
                 <StockTableRow key={stock.symbol} {...stock} />
               ))}
             </div>

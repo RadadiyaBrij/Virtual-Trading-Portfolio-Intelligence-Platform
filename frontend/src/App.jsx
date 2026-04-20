@@ -9,6 +9,7 @@ import News from './pages/News'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Portfolio from './pages/Portfolio'
+import Profile from './pages/Profile'
 import { supabase } from './lib/supabase'
 
 function App() {
@@ -45,6 +46,7 @@ function App() {
           <Route path="/login" element={session ? <Navigate to="/dashboard" /> : <Login />} />
           <Route path="/signup" element={session ? <Navigate to="/dashboard" /> : <Signup />} />
           <Route path="/portfolio" element={session ? <Portfolio /> : <Navigate to="/login" />} />
+          <Route path="/profile" element={session ? <Profile /> : <Navigate to="/login" />} />
         </Routes>
       </div>
     </>

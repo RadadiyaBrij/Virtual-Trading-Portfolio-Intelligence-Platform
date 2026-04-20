@@ -283,7 +283,7 @@ export default function StockAnalysis() {
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6 pt-8 pb-16 relative z-10">
+        <div className="max-w-7xl mx-auto px-6 pt-28 md:pt-32 pb-16 relative z-10">
           <div className="flex items-center gap-4 mb-8">
             <Link to={`/stocks/${symbol}`} className="inline-flex items-center text-gray-400 hover:text-white transition-colors group">
               <FiArrowLeft className="mr-2 group-hover:-translate-x-1 transition-transform" /> Back to {symbol.toUpperCase()}

@@ -45,8 +45,9 @@ export default function Portfolio() {
 
   const totalValue = holdings.reduce((acc, curr) => acc + curr.value, 0);
   
-  // All-time profit/loss = (Available Cash + Value of Current Holdings) - Starting Balance (1,000,000)
-  const allTimeProfit = profile ? (profile.balance + totalValue) - 1000000 : 0;
+  const realizedProfit = transactions.reduce((acc, tx) => acc + (tx.profit_loss_inr || 0), 0);
+  const unrealizedProfit = holdings.reduce((acc, h) => acc + (h.profit || 0), 0);
+  const allTimeProfit = realizedProfit + unrealizedProfit;
 
   const handleSell = async (symbol, qty, currentPrice) => {
     if (!window.confirm(`Are you sure you want to sell ${qty} shares of ${symbol}?`)) return;
@@ -76,7 +77,7 @@ export default function Portfolio() {
   if (error) return <div className="min-h-screen bg-black flex items-center justify-center text-red-400">{error}</div>;
 
   return (
-    <div className="min-h-screen bg-black text-white p-6 md:p-10">
+    <div className="min-h-screen bg-black text-white p-6 md:p-10 pt-28 md:pt-32">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl font-bold mb-8 tracking-tight">My Portfolio</h1>
         

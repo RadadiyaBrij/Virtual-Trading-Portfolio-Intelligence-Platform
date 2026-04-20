@@ -270,13 +270,17 @@ def get_portfolio(user=Depends(verify_user), db: Session = Depends(get_db)):
             curr = yf.Ticker(h.symbol).fast_info['lastPrice']
         except:
             curr = h.average_buy_price_inr
+            
+        rate = 83.0 if ".NS" not in h.symbol else 1.0
+        curr_inr = curr if rate == 1.0 else (curr * rate)
+        
         results.append({
             "symbol": h.symbol,
             "quantity": h.quantity,
             "avgPrice": h.average_buy_price_inr,
-            "currentPrice": curr,
-            "value": h.quantity * curr,
-            "profit": (curr - h.average_buy_price_inr) * h.quantity
+            "currentPrice": curr_inr,
+            "value": h.quantity * curr_inr,
+            "profit": (curr_inr - h.average_buy_price_inr) * h.quantity
         })
     return results
 
