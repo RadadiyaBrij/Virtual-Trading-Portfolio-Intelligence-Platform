@@ -38,8 +38,11 @@ def build_features(df: pd.DataFrame, horizon: str = "30d", is_training: bool = T
         macd = ta.macd(df['Close'], fast=5, slow=15)
         if macd is not None and not macd.empty:
             df['MACD'] = macd.iloc[:, 0]
+            df['MACD_hist'] = macd.iloc[:, 1]
+            df['MACD_signal'] = macd.iloc[:, 2]
         else:
-            df['MACD'] = np.nan
+            df['MACD'] = df['MACD_hist'] = df['MACD_signal'] = np.nan
+
             
         df['volatility_5'] = df['Close'].rolling(5).std()
         df['vol_regime'] = df['volatility_5'] / (df['Close'].rolling(20).std() + 1e-9)
@@ -62,8 +65,11 @@ def build_features(df: pd.DataFrame, horizon: str = "30d", is_training: bool = T
         macd = ta.macd(df['Close'], fast=12, slow=26)
         if macd is not None and not macd.empty:
             df['MACD'] = macd.iloc[:, 0]
+            df['MACD_hist'] = macd.iloc[:, 1]
+            df['MACD_signal'] = macd.iloc[:, 2]
         else:
-            df['MACD'] = np.nan
+            df['MACD'] = df['MACD_hist'] = df['MACD_signal'] = np.nan
+
             
         df['volatility_10'] = df['Close'].rolling(10).std()
         df['vol_regime'] = df['volatility_10'] / (df['Close'].rolling(30).std() + 1e-9)
@@ -90,8 +96,11 @@ def build_features(df: pd.DataFrame, horizon: str = "30d", is_training: bool = T
         macd = ta.macd(df['Close'], fast=12, slow=26)
         if macd is not None and not macd.empty:
             df['MACD'] = macd.iloc[:, 0]
+            df['MACD_hist'] = macd.iloc[:, 1]
+            df['MACD_signal'] = macd.iloc[:, 2]
         else:
-            df['MACD'] = np.nan
+            df['MACD'] = df['MACD_hist'] = df['MACD_signal'] = np.nan
+
             
         df['volatility_10'] = df['Close'].rolling(10).std()
         df['volatility_30'] = df['Close'].rolling(30).std()

@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+yfinance
+supabase
+sqlalchemy
+requests
+python-dotenv
+pandas
+numpy
+pandas-ta
+xgboost
+scikit-learn
+psycopg2-binary
