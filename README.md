@@ -1,6 +1,6 @@
-# TradeMind Quant - Virtual Trading & Portfolio Intelligence Platform
+# TradeMind - Virtual Trading & Portfolio Intelligence Platform
 
-TradeMind Quant is a high-performance virtual trading and quantitative intelligence platform. It provides users with real-time market data, technical analysis, automated backtesting capabilities, and a comprehensive simulated portfolio management system with a modern, glassmorphism-inspired UI.
+TradeMind is a high-performance virtual trading and quantitative intelligence platform. It provides users with real-time market data, technical analysis, automated backtesting capabilities, and a comprehensive simulated portfolio management system with a modern, glassmorphism-inspired UI.
 
 ## Features
 
