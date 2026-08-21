@@ -50,8 +50,12 @@ app = FastAPI(title="Capital Terminal Trading Platform API")
 
 @app.on_event("startup")
 def startup_db_init():
-    from database import init_db
-    init_db()
+    try:
+        from database import init_db
+        init_db()
+        print("Database initialized successfully.")
+    except Exception as e:
+        print(f"Warning: Failed to initialize database on startup: {e}")
 
 app.add_middleware(
     CORSMiddleware,
