@@ -240,7 +240,17 @@ class FinancialScoringEngine:
 
 def extract_fundamentals_from_yfinance(symbol: str) -> StockFundamentals:
     import yfinance as yf
-    t = yf.Ticker(symbol); i = t.info
+    import math
+    
+    t = yf.Ticker(symbol)
+    try:
+        i = t.info
+        if not isinstance(i, dict):
+            i = {}
+    except Exception as e:
+        print(f"yfinance error for {symbol}: {e}")
+        i = {}
+        
     is_usd = not (symbol.endswith('.NS') or symbol.endswith('.BO'))
     ex = 83.0 if is_usd else 1.0
 

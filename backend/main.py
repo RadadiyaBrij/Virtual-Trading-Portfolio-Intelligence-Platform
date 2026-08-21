@@ -264,13 +264,16 @@ def get_stock_analysis(symbol: str, db: Session = Depends(get_db)):
         from services.scoring_engine import analyze_stock
         result = analyze_stock(symbol)
         
-        if cached:
-            cached.analysis_data = result
-            cached.last_computed = datetime.datetime.utcnow()
-        else:
-            new_cache = FundamentalAnalysisCache(symbol=symbol.upper(), analysis_data=result)
-            db.add(new_cache)
-        db.commit()
+        # Only cache if we actually got valid data (score > 0)
+        if result.get("totalScore", 0) > 0:
+            if cached:
+                cached.analysis_data = result
+                cached.last_computed = datetime.datetime.utcnow()
+            else:
+                new_cache = FundamentalAnalysisCache(symbol=symbol.upper(), analysis_data=result)
+                db.add(new_cache)
+            db.commit()
+            
         return result
     except Exception as e:
         return {"status": "error", "message": str(e)}
