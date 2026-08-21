@@ -306,12 +306,31 @@ def get_stock_chart(symbol: str, range: str = Query("1M")):
 @app.get("/portfolio")
 def get_portfolio(user=Depends(verify_user), db: Session = Depends(get_db)):
     holdings = db.query(PortfolioHolding).filter(PortfolioHolding.user_id == user.id).all()
+    if not holdings:
+        return []
+        
+    symbols = [h.symbol for h in holdings]
+    prices = {}
+    
+    try:
+        data = yf.download(symbols, period="5d", progress=False, threads=True)
+        if not data.empty and 'Close' in data:
+            if len(symbols) > 1:
+                for sym in symbols:
+                    if sym in data['Close'].columns:
+                        series = data['Close'][sym].dropna()
+                        if not series.empty:
+                            prices[sym] = float(series.iloc[-1])
+            else:
+                series = data['Close'].dropna()
+                if not series.empty:
+                    prices[symbols[0]] = float(series.iloc[-1])
+    except Exception:
+        pass
+
     results = []
     for h in holdings:
-        try:
-            curr = yf.Ticker(h.symbol).fast_info['lastPrice']
-        except:
-            curr = h.average_buy_price_inr
+        curr = prices.get(h.symbol, h.average_buy_price_inr)
             
         rate = 83.0 if ".NS" not in h.symbol else 1.0
         curr_inr = curr if rate == 1.0 else (curr * rate)
