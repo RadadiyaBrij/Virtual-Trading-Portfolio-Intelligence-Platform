@@ -56,7 +56,7 @@ def startup_db_init():
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -200,20 +200,26 @@ def get_stock(symbol: str):
         company_news = news_res[:5] if isinstance(news_res, list) else []
     except Exception:
         company_news = []
-    stock = yf.Ticker(symbol)
-    data = stock.info
+    try:
+        stock = yf.Ticker(symbol)
+        data = stock.info
+        if not isinstance(data, dict):
+            data = {}
+    except Exception:
+        data = {}
+        
     is_usd = not (symbol.endswith('.NS') or symbol.endswith('.BO'))
     exchange_rate = 83.0 if is_usd else 1.0
 
     return {
         "symbol": symbol.upper(),
-        "name": data.get("shortName", symbol),
-        "price": round((current_price if current_price else data.get("currentPrice", 0)) * exchange_rate, 2),
+        "name": data.get("shortName", symbol) if isinstance(data, dict) else symbol,
+        "price": round((current_price if current_price else (data.get("currentPrice", 0) if isinstance(data, dict) else 0)) * exchange_rate, 2),
         "change": round(change * exchange_rate, 2) if change else 0,
         "changePercent": round(change_percent, 2) if change_percent else 0,
-        "volume": format_volume(data.get("volume") or data.get("regularMarketVolume", 0), is_usd),
+        "volume": format_volume(data.get("volume") or data.get("regularMarketVolume", 0) if isinstance(data, dict) else 0, is_usd),
         "isLoss": (change < 0) if change else False,
-        "description": data.get("longBusinessSummary", "No description available."),
+        "description": data.get("longBusinessSummary", "No description available.") if isinstance(data, dict) else "No description available.",
         "sector": data.get("sector", "N/A"),
         "industry": data.get("industry", "N/A"),
         "website": data.get("website", "#"),
