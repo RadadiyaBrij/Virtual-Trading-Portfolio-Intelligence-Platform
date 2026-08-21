@@ -12,7 +12,7 @@ export default function News() {
     setError(null);
     try {
      
-      const response = await fetch(`http://127.0.0.1:8000/news?category=${category}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/news?category=${category}`);
       if (!response.ok) throw new Error('Failed to fetch news');
       const data = await response.json();
       
