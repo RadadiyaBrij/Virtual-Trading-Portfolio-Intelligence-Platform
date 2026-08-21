@@ -52,3 +52,10 @@ class MLBacktestCache(Base):
     symbol = Column(String, primary_key=True, index=True)
     backtest_data = Column(JSON, nullable=False)
     last_computed = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+class FundamentalAnalysisCache(Base):
+    __tablename__ = "fundamental_analysis_cache"
+    
+    symbol = Column(String, primary_key=True, index=True)
+    analysis_data = Column(JSON, nullable=False)
+    last_computed = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)

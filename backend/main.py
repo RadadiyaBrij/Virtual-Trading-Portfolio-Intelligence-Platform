@@ -239,10 +239,26 @@ def get_stock(symbol: str):
     }
 
 @app.get("/stocks/{symbol}/analysis")
-def get_stock_analysis(symbol: str):
+def get_stock_analysis(symbol: str, db: Session = Depends(get_db)):
     try:
+        from db_models import FundamentalAnalysisCache
+        cached = db.query(FundamentalAnalysisCache).filter(FundamentalAnalysisCache.symbol == symbol.upper()).first()
+        if cached:
+            time_diff = datetime.datetime.utcnow() - cached.last_computed
+            if time_diff.total_seconds() < 86400: # 24 hours
+                return cached.analysis_data
+
         from services.scoring_engine import analyze_stock
-        return analyze_stock(symbol)
+        result = analyze_stock(symbol)
+        
+        if cached:
+            cached.analysis_data = result
+            cached.last_computed = datetime.datetime.utcnow()
+        else:
+            new_cache = FundamentalAnalysisCache(symbol=symbol.upper(), analysis_data=result)
+            db.add(new_cache)
+        db.commit()
+        return result
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
