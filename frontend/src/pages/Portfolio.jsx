@@ -21,15 +21,15 @@ export default function Portfolio() {
     try {
       const headers = { 'Authorization': `Bearer ${session.access_token}` };
       
-      const profileRes = await fetch('http://127.0.0.1:8000/auth/profile', { headers });
+      const profileRes = await fetch(`${import.meta.env.VITE_API_URL}/auth/profile`, { headers });
       const profileData = await profileRes.json();
       setProfile(profileData);
 
-      const portfolioRes = await fetch('http://127.0.0.1:8000/portfolio', { headers });
+      const portfolioRes = await fetch(`${import.meta.env.VITE_API_URL}/portfolio`, { headers });
       const portfolioData = await portfolioRes.json();
       setHoldings(portfolioData);
 
-      const txRes = await fetch('http://127.0.0.1:8000/transactions', { headers });
+      const txRes = await fetch(`${import.meta.env.VITE_API_URL}/transactions`, { headers });
       const txData = await txRes.json();
       setTransactions(txData);
     } catch (err) {
@@ -53,7 +53,7 @@ export default function Portfolio() {
     if (!window.confirm(`Are you sure you want to sell ${qty} shares of ${symbol}?`)) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('http://127.0.0.1:8000/trade/sell', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/trade/sell`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

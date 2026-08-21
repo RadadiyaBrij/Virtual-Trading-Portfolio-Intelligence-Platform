@@ -28,9 +28,9 @@ export default function Profile() {
     try {
       const headers = { 'Authorization': `Bearer ${token}` };
       const [profileRes, portfolioRes, txRes] = await Promise.all([
-        fetch('http://127.0.0.1:8000/auth/profile', { headers }),
-        fetch('http://127.0.0.1:8000/portfolio', { headers }),
-        fetch('http://127.0.0.1:8000/transactions', { headers })
+        fetch(`${import.meta.env.VITE_API_URL}/auth/profile`, { headers }),
+        fetch(`${import.meta.env.VITE_API_URL}/portfolio`, { headers }),
+        fetch(`${import.meta.env.VITE_API_URL}/transactions`, { headers })
       ]);
 
       const profileData = await profileRes.json();

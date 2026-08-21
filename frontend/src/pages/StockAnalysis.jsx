@@ -188,7 +188,7 @@ export default function StockAnalysis() {
       setLoading(true);
       setError(null);
       try {
-        const analysisRes = await fetch(`http://127.0.0.1:8000/stocks/${symbol}/analysis`);
+        const analysisRes = await fetch(`${import.meta.env.VITE_API_URL}/stocks/${symbol}/analysis`);
         if (!analysisRes.ok) throw new Error('Failed to fetch analysis');
         const data = await analysisRes.json();
         if (data.status === 'error') throw new Error(data.message);
@@ -196,7 +196,7 @@ export default function StockAnalysis() {
 
         try {
           setMlLoading(true);
-          const mlRes = await fetch(`http://127.0.0.1:8000/stocks/${symbol}/backtest`);
+          const mlRes = await fetch(`${import.meta.env.VITE_API_URL}/stocks/${symbol}/backtest`);
           if (mlRes.ok) {
             const mlData = await mlRes.json();
             if (mlData.status === 'success') {

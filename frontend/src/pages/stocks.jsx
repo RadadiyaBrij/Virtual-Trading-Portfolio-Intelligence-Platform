@@ -22,7 +22,7 @@ export default function Stocks() {
     else if (region === 'nifty50') targetSymbols = nifty50Symbols;
 
     try {
-      const response = await fetch(`http://127.0.0.1:8000/stocks/batch?symbols=${encodeURIComponent(targetSymbols)}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/stocks/batch?symbols=${encodeURIComponent(targetSymbols)}`);
       if (!response.ok) {
         throw new Error('Failed to fetch stock data');
       }

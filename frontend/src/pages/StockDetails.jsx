@@ -34,7 +34,7 @@ export default function StockDetails() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`http://127.0.0.1:8000/stocks/${symbol}`);
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/stocks/${symbol}`);
         if (!response.ok) throw new Error('Failed to fetch details');
         const data = await response.json();
         setStock(data);
@@ -50,7 +50,7 @@ export default function StockDetails() {
   useEffect(() => {
     const fetchChart = async () => {
       try {
-        const response = await fetch(`http://127.0.0.1:8000/stocks/${symbol}/chart?range=${timeRange}`);
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/stocks/${symbol}/chart?range=${timeRange}`);
         if (response.ok) {
           const data = await response.json();
           setChartData(data);
@@ -71,7 +71,7 @@ export default function StockDetails() {
     setTradeLoading(true);
     setTradeMessage(null);
     try {
-      const response = await fetch(`http://127.0.0.1:8000/trade/${action.toLowerCase()}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/trade/${action.toLowerCase()}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
