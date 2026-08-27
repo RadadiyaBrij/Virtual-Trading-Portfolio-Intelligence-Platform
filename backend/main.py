@@ -282,6 +282,19 @@ def get_stock_analysis(symbol: str, db: Session = Depends(get_db)):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+@app.get("/test-yq/{symbol}")
+def test_yahooquery(symbol: str):
+    try:
+        from yahooquery import Ticker
+        t = Ticker(symbol)
+        return {
+            "financial_data": t.financial_data,
+            "key_stats": t.key_stats,
+            "summary_detail": t.summary_detail
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @app.get("/stocks/{symbol}/backtest")
 def get_stock_backtest(symbol: str, db: Session = Depends(get_db)):
     try:
