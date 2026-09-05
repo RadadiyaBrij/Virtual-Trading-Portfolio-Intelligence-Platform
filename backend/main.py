@@ -295,6 +295,23 @@ def test_yahooquery(symbol: str):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+@app.get("/test-yfd/{symbol}")
+def test_yfinance_download(symbol: str):
+    try:
+        import yfinance as yf
+        data = yf.download(symbol, period="10y", interval="1d", auto_adjust=False, progress=False)
+        if data.empty:
+            return {"status": "empty", "shape": data.shape}
+        # Convert index (datetime) to string and head/tail to dict for JSON serialization
+        return {
+            "status": "success",
+            "shape": data.shape,
+            "head": data.head(2).to_dict(),
+            "tail": data.tail(2).to_dict()
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 @app.get("/stocks/{symbol}/backtest")
 def get_stock_backtest(symbol: str, db: Session = Depends(get_db)):
     try:
