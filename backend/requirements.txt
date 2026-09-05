@@ -11,5 +11,3 @@ pandas-ta
 xgboost
 scikit-learn
 psycopg2-binary
-yahooquery==2.3.7
-lxml==6.1.3
