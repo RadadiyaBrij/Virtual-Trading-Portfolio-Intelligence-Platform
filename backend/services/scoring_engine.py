@@ -240,17 +240,7 @@ class FinancialScoringEngine:
 
 def extract_fundamentals_from_yfinance(symbol: str) -> StockFundamentals:
     import yfinance as yf
-    import math
-    
-    t = yf.Ticker(symbol)
-    try:
-        i = t.info
-        if not isinstance(i, dict):
-            i = {}
-    except Exception as e:
-        print(f"yfinance error for {symbol}: {e}")
-        i = {}
-        
+    t = yf.Ticker(symbol); i = t.info
     is_usd = not (symbol.endswith('.NS') or symbol.endswith('.BO'))
     ex = 83.0 if is_usd else 1.0
 
@@ -340,4 +330,21 @@ def analyze_stock(symbol: str) -> dict:
         if isinstance(d, dict): return { "".join(x.capitalize() if i>0 else x for i,x in enumerate(k.split("_"))): to_camel(v) for k,v in d.items() }
         return d
     out = to_camel(asdict(res)); out["groups"] = out.pop("groupScores")
+    return { **out, "fundamentals": to_camel(asdict(f)) }
+
+def analyze_cached_stock(data: dict) -> dict:
+    from dataclasses import fields
+    valid_keys = {f.name for f in fields(StockFundamentals)}
+    filtered_data = {k: v for k, v in data.items() if k in valid_keys}
+    
+    f = StockFundamentals(**filtered_data)
+    res = FinancialScoringEngine().score(f)
+    
+    def to_camel(d):
+        if isinstance(d, list): return [to_camel(i) for i in d]
+        if isinstance(d, dict): return { "".join(x.capitalize() if i>0 else x for i,x in enumerate(k.split("_"))): to_camel(v) for k,v in d.items() }
+        return d
+        
+    out = to_camel(asdict(res))
+    out["groups"] = out.pop("groupScores")
     return { **out, "fundamentals": to_camel(asdict(f)) }

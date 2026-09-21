@@ -17,20 +17,34 @@ export default function Stocks() {
   const fetchStocks = async () => {
     setLoading(true);
     setError(null);
+    setStockData([]); // Clear previous data so we can append new data
+    
     let targetSymbols = indianSymbols;
     if (region === 'global') targetSymbols = globalSymbols;
     else if (region === 'nifty50') targetSymbols = nifty50Symbols;
 
+    // Split symbols into chunks of 10 to fetch progressively
+    const symbolsArray = targetSymbols.split(',');
+    const chunkSize = 10;
+    const chunks = [];
+    for (let i = 0; i < symbolsArray.length; i += chunkSize) {
+      chunks.push(symbolsArray.slice(i, i + chunkSize).join(','));
+    }
+
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/stocks/batch?symbols=${encodeURIComponent(targetSymbols)}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch stock data');
+      for (const chunk of chunks) {
+        const response = await fetch(`${(import.meta.env.VITE_API_URL || "").replace(/\/$/, "")}/stocks/batch?symbols=${encodeURIComponent(chunk)}`);
+        if (!response.ok) {
+          console.warn('Failed to fetch a chunk, skipping to next');
+          continue;
+        }
+        const data = await response.json();
+        // Append new stocks progressively as they arrive
+        setStockData(prev => [...prev, ...data]);
       }
-      const data = await response.json();
-      setStockData(data);
     } catch (err) {
       console.error(err);
-      setError('Could not connect to the backend. Is it running?');
+      setError('Could not connect to the backend or error fetching some data.');
     } finally {
       setLoading(false);
     }
@@ -125,12 +139,12 @@ export default function Stocks() {
               <FiRefreshCw className="animate-spin text-4xl mb-4 text-blue-500" />
               <p>Loading market screener...</p>
             </div>
-          ) : error ? (
+          ) : error && stockData.length === 0 ? (
             <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-6 text-center mt-4">
               <p className="text-red-400 font-medium mb-2">{error}</p>
               <button onClick={fetchStocks} className="bg-red-500/20 hover:bg-red-500/40 text-red-300 px-4 py-2 rounded-md transition-colors text-sm">Retry Connection</button>
             </div>
-          ) : filteredStocks.length === 0 ? (
+          ) : filteredStocks.length === 0 && !loading ? (
             <div className="py-20 text-center text-gray-500 border border-gray-800 rounded-xl bg-gray-900/10 mt-2">
               <p className="text-xl font-medium mb-2">No stocks found matching "{searchQuery}".</p>
             </div>
@@ -139,6 +153,13 @@ export default function Stocks() {
               {filteredStocks.map((stock) => (
                 <StockTableRow key={stock.symbol} {...stock} />
               ))}
+              
+              {loading && stockData.length > 0 && (
+                <div className="flex items-center justify-center py-10 text-blue-500 bg-gray-900/5 border border-gray-800/50 rounded-xl mt-2 backdrop-blur-sm">
+                  <FiRefreshCw className="animate-spin text-xl" />
+                  <span className="ml-3 text-sm font-medium tracking-wide text-gray-400">Loading more stocks...</span>
+                </div>
+              )}
             </div>
           )}
 

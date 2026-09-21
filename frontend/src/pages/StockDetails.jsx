@@ -17,7 +17,7 @@ export default function StockDetails() {
   const [error, setError] = useState(null);
   const [session, setSession] = useState(null);
 
-  const [timeRange, setTimeRange] = useState('1M');
+  const [timeRange, setTimeRange] = useState('1W');
   const [chartData, setChartData] = useState([]);
   const [quantity, setQuantity] = useState(1);
   const [tradeLoading, setTradeLoading] = useState(false);
@@ -222,7 +222,7 @@ export default function StockDetails() {
               <h2 className="text-2xl font-black text-transparent bg-clip-text bg-linear-to-r from-gray-100 to-gray-400">Market Price Action</h2>
             </div>
             <div className="flex bg-black/60 border border-white/5 rounded-xl p-1.5 shadow-inner">
-              {['1D', '1W', '1M', '1Y'].map((range) => (
+              {['1W', '1M', '1Y'].map((range) => (
                 <button
                   key={range}
                   onClick={() => setTimeRange(range)}

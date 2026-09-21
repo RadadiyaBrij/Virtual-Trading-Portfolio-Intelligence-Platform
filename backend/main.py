@@ -7,10 +7,11 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from supabase import create_client, Client
 from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
-from db_models import UserWallet, PortfolioHolding, TransactionLog
+from db_models import UserWallet, PortfolioHolding, TransactionLog, ChartCache, FundamentalCache
 import datetime
 import requests
 import random
+import time
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -50,12 +51,8 @@ app = FastAPI(title="Capital Terminal Trading Platform API")
 
 @app.on_event("startup")
 def startup_db_init():
-    try:
-        from database import init_db
-        init_db()
-        print("Database initialized successfully.")
-    except Exception as e:
-        print(f"Warning: Failed to initialize database on startup: {e}")
+    from database import init_db
+    init_db()
 
 app.add_middleware(
     CORSMiddleware,
@@ -64,19 +61,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-from fastapi.responses import JSONResponse
-from fastapi import Request
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    import traceback
-    print(f"Unhandled Exception: {exc}")
-    traceback.print_exc()
-    return JSONResponse(
-        status_code=500,
-        content={"status": "error", "message": f"Server Error: {str(exc)}"}
-    )
 
 def format_volume(val, is_usd=False):
     if not val: return "0"
@@ -127,127 +111,87 @@ def get_news(category: str = Query("general")):
         return {"status": "error", "message": str(e)}
 
 @app.get("/stocks/batch")
-def get_stocks_batch(symbols: str = Query(...)):
-    sym_list = [s.strip() for s in symbols.split(",") if s.strip()]
+def get_stocks_batch(symbols: str = Query(...), db: Session = Depends(get_db)):
+    sym_list = [s.strip().upper() for s in symbols.split(",") if s.strip()]
     if not sym_list: return []
-    CHUNKS = 20
+    
     results = []
-    FINNHUB_KEY = os.getenv("FINNHUB_API_KEY")
-    for i in range(0, len(sym_list), CHUNKS):
-        current_chunk = sym_list[i:i + CHUNKS]
-        try:
-            data = yf.download(current_chunk, period="5d", progress=False, threads=True)
-            for sym in current_chunk:
-                try:
-                    success = False
-                    if not data.empty:
-                        if len(current_chunk) > 1 and 'Close' in data and sym in data['Close'].columns:
-                            close_series = data['Close'][sym].dropna()
-                            vol_series = data['Volume'][sym].dropna()
-                            if len(close_series) >= 1:
-                                current_price = float(close_series.iloc[-1])
-                                prev_close = float(close_series.iloc[-2]) if len(close_series) > 1 else current_price
-                                vol = int(vol_series.iloc[-1]) if len(vol_series) else 0
-                                spark = [float(x) for x in close_series.tolist()]
-                                success = True
-                        elif len(current_chunk) == 1 and 'Close' in data and not data['Close'].empty:
-                            close_series = data['Close'].dropna()
-                            vol_series = data['Volume'].dropna()
-                            if not close_series.empty:
-                                current_price = float(close_series.iloc[-1])
-                                prev_close = float(close_series.iloc[-2]) if len(close_series) > 1 else current_price
-                                vol = int(vol_series.iloc[-1]) if len(vol_series) else 0
-                                spark = [float(x) for x in close_series.tolist()]
-                                success = True
-                    if not success and FINNHUB_KEY:
-                        try:
-                             quote = requests.get(f"https://finnhub.io/api/v1/quote?symbol={sym}&token={FINNHUB_KEY}", timeout=2).json()
-                             if quote.get('c', 0) > 0:
-                                 current_price = float(quote['c'])
-                                 prev_close = float(quote['pc'])
-                                 vol = 0
-                                 spark = [prev_close, current_price]
-                                 success = True
-                        except Exception: pass
-                    if not success: continue
-                    # Conversion and Formatting logic
-                    is_indian = sym.endswith('.NS') or sym.endswith('.BO')
-                    exchange_rate = 1.0 if is_indian else 83.0
-                    
-                    price_inr = current_price * exchange_rate
-                    prev_close_inr = prev_close * exchange_rate
-                    change_inr = price_inr - prev_close_inr
-                    change_percent = (change_inr / prev_close_inr) * 100 if prev_close_inr else 0.0
-                    mcap_value = current_price * 1000000 * exchange_rate 
-                    if mcap_value >= 10000000:
-                        mcap_str = f"{mcap_value / 10000000:.2f} Cr"
-                    elif mcap_value >= 100000:
-                        mcap_str = f"{mcap_value / 100000:.2f} L"
-                    else:
-                        mcap_str = f"{mcap_value:,.0f}"
-
-                    results.append({
-                        "symbol": sym.upper(),
-                        "name": sym.replace('.NS', '').replace('.BO', '').replace('-', ' '),
-                        "price": round(price_inr, 2),
-                        "previousClose": round(prev_close_inr, 2),
-                        "change": round(float(change_inr), 2),
-                        "changePercent": round(float(change_percent), 2),
-                        "volume": vol,
-                        "formattedMarketCap": mcap_str,
-                        "isLoss": bool(change_inr < 0),
-                        "sparkline": [float(x * exchange_rate) for x in spark]
-                    })
-                except Exception: continue
-        except Exception: continue
+    # Read from cache
+    for sym in sym_list:
+        c_cache = db.query(ChartCache).filter(ChartCache.symbol == sym).first()
+        if c_cache:
+            curr = c_cache.current_price or 0.0
+            prev = c_cache.previous_close or 0.0
+            
+            change_inr = curr - prev
+            change_percent = (change_inr / prev) * 100 if prev else 0.0
+            
+            results.append({
+                "symbol": sym.upper(),
+                "name": sym.replace('.NS', '').replace('.BO', '').replace('-', ' '),
+                "price": round(curr, 2),
+                "previousClose": round(prev, 2),
+                "change": round(float(change_inr), 2),
+                "changePercent": round(float(change_percent), 2),
+                "volume": c_cache.volume or 0,
+                "formattedMarketCap": c_cache.market_cap_str or "0",
+                "isLoss": bool(change_inr < 0),
+                "sparkline": c_cache.sparkline or []
+            })
     return results
 
 @app.get("/stocks/{symbol}")
-def get_stock(symbol: str):
+def get_stock(symbol: str, db: Session = Depends(get_db)):
     FINNHUB_KEY = os.getenv("FINNHUB_API_KEY")
     try:
-        quote_res = requests.get(f"https://finnhub.io/api/v1/quote?symbol={symbol}&token={FINNHUB_KEY}").json()
+        quote_res = requests.get(f"https://finnhub.io/api/v1/quote?symbol={symbol}&token={FINNHUB_KEY}", timeout=1.5).json()
         current_price = quote_res.get("c", 0)
         change = quote_res.get("d", 0)
         change_percent = quote_res.get("dp", 0)
     except Exception:
         current_price, change, change_percent = 0, 0, 0
-    try:
-        news_res = requests.get(f"https://finnhub.io/api/v1/company-news?symbol={symbol}&from={(datetime.datetime.today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d')}&to={datetime.datetime.today().strftime('%Y-%m-%d')}&token={FINNHUB_KEY}").json()
-        company_news = news_res[:5] if isinstance(news_res, list) else []
-    except Exception:
-        company_news = []
-    try:
-        stock = yf.Ticker(symbol)
-        data = stock.info
-        if not isinstance(data, dict):
-            data = {}
-    except Exception:
-        data = {}
+        
+    global news_cache
+    if 'news_cache' not in globals():
+        news_cache = {}
+        
+    current_time = time.time()
+    if symbol in news_cache and current_time - news_cache[symbol]["timestamp"] < 3600: # 1 hour cache
+        company_news = news_cache[symbol]["data"]
+    else:
+        try:
+            news_res = requests.get(f"https://finnhub.io/api/v1/company-news?symbol={symbol}&from={(datetime.datetime.today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d')}&to={datetime.datetime.today().strftime('%Y-%m-%d')}&token={FINNHUB_KEY}", timeout=1.5).json()
+            company_news = news_res[:5] if isinstance(news_res, list) else []
+            news_cache[symbol] = {"data": company_news, "timestamp": current_time}
+        except Exception:
+            company_news = []
+        
+    f_cache = db.query(FundamentalCache).filter(FundamentalCache.symbol == symbol.upper()).first()
+    data = f_cache.data if f_cache else {}
         
     is_usd = not (symbol.endswith('.NS') or symbol.endswith('.BO'))
     exchange_rate = 83.0 if is_usd else 1.0
 
     return {
         "symbol": symbol.upper(),
-        "name": data.get("shortName", symbol) if isinstance(data, dict) else symbol,
-        "price": round((current_price if current_price else (data.get("currentPrice", 0) if isinstance(data, dict) else 0)) * exchange_rate, 2),
+        "name": data.get("name", symbol),
+        "price": round((current_price if current_price else data.get("current_price", 0)) * exchange_rate, 2),
         "change": round(change * exchange_rate, 2) if change else 0,
         "changePercent": round(change_percent, 2) if change_percent else 0,
-        "volume": format_volume(data.get("volume") or data.get("regularMarketVolume", 0) if isinstance(data, dict) else 0, is_usd),
+        "volume": format_volume(data.get("volume", 0), is_usd),
         "isLoss": (change < 0) if change else False,
-        "description": data.get("longBusinessSummary", "No description available.") if isinstance(data, dict) else "No description available.",
+        "description": data.get("description", "No description available."),
         "sector": data.get("sector", "N/A"),
         "industry": data.get("industry", "N/A"),
         "website": data.get("website", "#"),
-        "marketCap": format_volume(data.get("marketCap", 0), is_usd),
-        "dividendYield": round(data.get("dividendYield", 0) * 100, 2) if data.get("dividendYield") else "N/A",
-        "trailingPE": round(data.get("trailingPE", 0), 2) if data.get("trailingPE") else "N/A",
-        "forwardPE": round(data.get("forwardPE", 0), 2) if data.get("forwardPE") else "N/A",
-        "fiftyTwoWeekLow": round(data.get("fiftyTwoWeekLow", 0) * exchange_rate, 2),
-        "fiftyTwoWeekHigh": round(data.get("fiftyTwoWeekHigh", 0) * exchange_rate, 2),
+        "marketCap": format_volume(data.get("market_cap", 0), is_usd),
+        "dividendYield": data.get("dividend_yield", "N/A"),
+        "trailingPE": round(data.get("pe", 0), 2) if data.get("pe") else "N/A",
+        "forwardPE": round(data.get("forward_pe", 0), 2) if data.get("forward_pe") else "N/A",
+        "fiftyTwoWeekLow": data.get("fiftyTwoWeekLow", 0),
+        "fiftyTwoWeekHigh": data.get("fiftyTwoWeekHigh", 0),
         "totalRevenue": format_volume(data.get("totalRevenue", 0), is_usd),
-        "netIncome": format_volume(data.get("netIncomeToCommon", 0), is_usd),
+        "netIncome": format_volume(data.get("netIncome", 0), is_usd),
         "city": data.get("city", "N/A"),
         "state": data.get("state", "N/A"),
         "country": data.get("country", "N/A"),
@@ -258,44 +202,12 @@ def get_stock(symbol: str):
 @app.get("/stocks/{symbol}/analysis")
 def get_stock_analysis(symbol: str, db: Session = Depends(get_db)):
     try:
-        from db_models import FundamentalAnalysisCache
-        cached = db.query(FundamentalAnalysisCache).filter(FundamentalAnalysisCache.symbol == symbol.upper()).first()
-        if cached:
-            time_diff = datetime.datetime.utcnow() - cached.last_computed
-            if time_diff.total_seconds() < 86400: # 24 hours
-                return cached.analysis_data
-
-        from services.scoring_engine import analyze_stock
-        result = analyze_stock(symbol)
-        
-        # Only cache if we actually got valid data (score > 0)
-        if result.get("totalScore", 0) > 0:
-            if cached:
-                cached.analysis_data = result
-                cached.last_computed = datetime.datetime.utcnow()
-            else:
-                new_cache = FundamentalAnalysisCache(symbol=symbol.upper(), analysis_data=result)
-                db.add(new_cache)
-            db.commit()
+        f_cache = db.query(FundamentalCache).filter(FundamentalCache.symbol == symbol.upper()).first()
+        if not f_cache:
+            return {"status": "error", "message": "Fundamental data not found in cache. Run update script."}
             
-        return result
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
-@app.get("/test-yfd/{symbol}")
-def test_yfinance_download(symbol: str):
-    try:
-        import yfinance as yf
-        data = yf.download(symbol, period="10y", interval="1d", auto_adjust=False, progress=False)
-        if data.empty:
-            return {"status": "empty", "shape": data.shape}
-        # Convert index (datetime) to string and head/tail to dict for JSON serialization
-        return {
-            "status": "success",
-            "shape": data.shape,
-            "head": data.head(2).to_dict(),
-            "tail": data.tail(2).to_dict()
-        }
+        from services.scoring_engine import analyze_cached_stock
+        return analyze_cached_stock(f_cache.data)
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
@@ -329,45 +241,31 @@ def get_stock_backtest(symbol: str, db: Session = Depends(get_db)):
         return {"status": "error", "message": str(e)}
 
 @app.get("/stocks/{symbol}/chart")
-def get_stock_chart(symbol: str, range: str = Query("1M")):
-    mapping = {"1D": ("1d", "5m"), "1W": ("5d", "15m"), "1M": ("1mo", "1d"), "1Y": ("1y", "1d")}
-    period, interval = mapping.get(range.upper(), ("1mo", "1d"))
-    is_usd = not (symbol.endswith('.NS') or symbol.endswith('.BO'))
-    ex = 83.0 if is_usd else 1.0
-    try:
-        ticker = yf.Ticker(symbol)
-        hist = ticker.history(period=period, interval=interval)
-        return [{"time": i.strftime("%b %d") if interval == "1d" else i.strftime("%H:%M %b %d"), "price": round(r['Close'] * ex, 2)} for i, r in hist.iterrows()]
-    except Exception: return []
+def get_stock_chart(symbol: str, range: str = Query("1M"), db: Session = Depends(get_db)):
+    c_cache = db.query(ChartCache).filter(ChartCache.symbol == symbol.upper()).first()
+    if not c_cache:
+        return []
+    
+    rng = range.upper()
+    if rng == "1W":
+        return c_cache.chart_1w or []
+    elif rng == "1M":
+        return c_cache.chart_1m or []
+    elif rng == "1Y":
+        return c_cache.chart_1y or []
+    else:
+        # Fallback to 1M if 1D is requested (since 1D is disabled)
+        return c_cache.chart_1m or []
 
 @app.get("/portfolio")
 def get_portfolio(user=Depends(verify_user), db: Session = Depends(get_db)):
     holdings = db.query(PortfolioHolding).filter(PortfolioHolding.user_id == user.id).all()
-    if not holdings:
-        return []
-        
-    symbols = [h.symbol for h in holdings]
-    prices = {}
-    
-    try:
-        data = yf.download(symbols, period="5d", progress=False, threads=True)
-        if not data.empty and 'Close' in data:
-            if len(symbols) > 1:
-                for sym in symbols:
-                    if sym in data['Close'].columns:
-                        series = data['Close'][sym].dropna()
-                        if not series.empty:
-                            prices[sym] = float(series.iloc[-1])
-            else:
-                series = data['Close'].dropna()
-                if not series.empty:
-                    prices[symbols[0]] = float(series.iloc[-1])
-    except Exception:
-        pass
-
     results = []
     for h in holdings:
-        curr = prices.get(h.symbol, h.average_buy_price_inr)
+        try:
+            curr = yf.Ticker(h.symbol).fast_info['lastPrice']
+        except:
+            curr = h.average_buy_price_inr
             
         rate = 83.0 if ".NS" not in h.symbol else 1.0
         curr_inr = curr if rate == 1.0 else (curr * rate)

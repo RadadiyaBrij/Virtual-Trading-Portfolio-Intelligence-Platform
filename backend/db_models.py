@@ -53,9 +53,23 @@ class MLBacktestCache(Base):
     backtest_data = Column(JSON, nullable=False)
     last_computed = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
-class FundamentalAnalysisCache(Base):
-    __tablename__ = "fundamental_analysis_cache"
+class FundamentalCache(Base):
+    __tablename__ = "fundamental_cache"
     
     symbol = Column(String, primary_key=True, index=True)
-    analysis_data = Column(JSON, nullable=False)
+    data = Column(JSON, nullable=False)
+    last_computed = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+class ChartCache(Base):
+    __tablename__ = "chart_cache"
+    
+    symbol = Column(String, primary_key=True, index=True)
+    sparkline = Column(JSON)
+    chart_1w = Column(JSON)
+    chart_1m = Column(JSON)
+    chart_1y = Column(JSON)
+    current_price = Column(Float)
+    previous_close = Column(Float)
+    volume = Column(Integer)
+    market_cap_str = Column(String)
     last_computed = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
