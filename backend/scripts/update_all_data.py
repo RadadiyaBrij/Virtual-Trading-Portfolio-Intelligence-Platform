@@ -126,7 +126,7 @@ def main():
                 f_cache = FundamentalCache(symbol=sym)
                 db.add(f_cache)
             f_cache.data = fund_data
-            f_cache.last_computed = datetime.datetime.utcnow()
+            f_cache.last_computed = datetime.datetime.now(datetime.timezone.utc)
             
             # Chart Data
             is_usd = not (sym.endswith('.NS') or sym.endswith('.BO'))
@@ -173,7 +173,7 @@ def main():
             c_cache.previous_close = float(prev_close * ex)
             c_cache.volume = vol
             c_cache.market_cap_str = mcap_str
-            c_cache.last_computed = datetime.datetime.utcnow()
+            c_cache.last_computed = datetime.datetime.now(datetime.timezone.utc)
             
             db.commit()
             

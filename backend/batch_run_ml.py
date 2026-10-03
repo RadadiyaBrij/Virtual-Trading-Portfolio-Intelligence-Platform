@@ -32,9 +32,10 @@ def run_ml_batch():
         try:
         #    Skip if already computed.
             cached = db.query(MLBacktestCache).filter(MLBacktestCache.symbol == symbol).first()
-            if cached:
-                time_diff = datetime.datetime.utcnow() - cached.last_computed
-                if time_diff.total_seconds() < 86400: 
+            if cached and cached.last_computed:
+                now_utc = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+                time_diff = now_utc - cached.last_computed
+                if time_diff.total_seconds() < 86400:
                     print(f"  - Skipped: {symbol} (Already cached today)")
                     continue
                     
@@ -42,7 +43,7 @@ def run_ml_batch():
             if result and result.get("status") == "success":
                 if cached:
                     cached.backtest_data = result
-                    cached.last_computed = datetime.datetime.utcnow()
+                    cached.last_computed = datetime.datetime.now(datetime.timezone.utc)
                 else:
                     new_cache = MLBacktestCache(symbol=symbol, backtest_data=result)
                     db.add(new_cache)

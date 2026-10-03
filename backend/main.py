@@ -168,6 +168,14 @@ def get_stock(symbol: str, db: Session = Depends(get_db)):
         
     f_cache = db.query(FundamentalCache).filter(FundamentalCache.symbol == symbol.upper()).first()
     data = f_cache.data if f_cache else {}
+    
+    # If Finnhub couldn't provide price (blocks Indian stocks), fall back to ChartCache
+    c_cache = db.query(ChartCache).filter(ChartCache.symbol == symbol.upper()).first()
+    if (not current_price or current_price == 0) and c_cache:
+        current_price = c_cache.current_price or 0
+        prev = c_cache.previous_close or 0
+        change = (current_price - prev) if prev else 0
+        change_percent = (change / prev * 100) if prev else 0
         
     is_usd = not (symbol.endswith('.NS') or symbol.endswith('.BO'))
     exchange_rate = 83.0 if is_usd else 1.0
