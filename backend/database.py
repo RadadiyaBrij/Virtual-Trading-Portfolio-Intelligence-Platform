@@ -6,6 +6,13 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL:
     DATABASE_URL = DATABASE_URL.strip("[]'\" ")
+    # Supabase connection strings sometimes use 'postgresql://' which SQLAlchemy
+    # maps to 'psycopg' (v3). Force psycopg2 (v2) which is what we have installed.
+    if DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+    elif DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+
 
 _engine = None
 _SessionLocal = None
