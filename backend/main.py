@@ -49,11 +49,7 @@ def verify_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
 
 app = FastAPI(title="Capital Terminal Trading Platform API")
 
-@app.on_event("startup")
-def startup_db_init():
-    from database import init_db
-    init_db()
-
+# CORS MUST be added before any routes or exception handlers
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -61,6 +57,28 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+from fastapi.responses import JSONResponse
+from fastapi.requests import Request
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch-all handler that ensures CORS headers are always present"""
+    print(f"[UNHANDLED ERROR] {request.url} → {type(exc).__name__}: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc), "type": type(exc).__name__},
+        headers={"Access-Control-Allow-Origin": "*"}
+    )
+
+@app.on_event("startup")
+def startup_db_init():
+    from database import init_db
+    init_db()
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "message": "TradeMind API is running"}
 
 def format_volume(val, is_usd=False):
     if not val: return "0"
@@ -112,33 +130,36 @@ def get_news(category: str = Query("general")):
 
 @app.get("/stocks/batch")
 def get_stocks_batch(symbols: str = Query(...), db: Session = Depends(get_db)):
-    sym_list = [s.strip().upper() for s in symbols.split(",") if s.strip()]
-    if not sym_list: return []
-    
-    results = []
-    # Read from cache
-    for sym in sym_list:
-        c_cache = db.query(ChartCache).filter(ChartCache.symbol == sym).first()
-        if c_cache:
-            curr = c_cache.current_price or 0.0
-            prev = c_cache.previous_close or 0.0
-            
-            change_inr = curr - prev
-            change_percent = (change_inr / prev) * 100 if prev else 0.0
-            
-            results.append({
-                "symbol": sym.upper(),
-                "name": sym.replace('.NS', '').replace('.BO', '').replace('-', ' '),
-                "price": round(curr, 2),
-                "previousClose": round(prev, 2),
-                "change": round(float(change_inr), 2),
-                "changePercent": round(float(change_percent), 2),
-                "volume": c_cache.volume or 0,
-                "formattedMarketCap": c_cache.market_cap_str or "0",
-                "isLoss": bool(change_inr < 0),
-                "sparkline": c_cache.sparkline or []
-            })
-    return results
+    try:
+        sym_list = [s.strip().upper() for s in symbols.split(",") if s.strip()]
+        if not sym_list: return []
+        
+        results = []
+        for sym in sym_list:
+            c_cache = db.query(ChartCache).filter(ChartCache.symbol == sym).first()
+            if c_cache:
+                curr = c_cache.current_price or 0.0
+                prev = c_cache.previous_close or 0.0
+                
+                change_inr = curr - prev
+                change_percent = (change_inr / prev) * 100 if prev else 0.0
+                
+                results.append({
+                    "symbol": sym.upper(),
+                    "name": sym.replace('.NS', '').replace('.BO', '').replace('-', ' '),
+                    "price": round(curr, 2),
+                    "previousClose": round(prev, 2),
+                    "change": round(float(change_inr), 2),
+                    "changePercent": round(float(change_percent), 2),
+                    "volume": c_cache.volume or 0,
+                    "formattedMarketCap": c_cache.market_cap_str or "0",
+                    "isLoss": bool(change_inr < 0),
+                    "sparkline": c_cache.sparkline or []
+                })
+        return results
+    except Exception as e:
+        print(f"[ERROR] /stocks/batch failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/stocks/{symbol}")
 def get_stock(symbol: str, db: Session = Depends(get_db)):
