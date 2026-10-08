@@ -1,6 +1,6 @@
 # TradeMind — Virtual Trading & Portfolio Intelligence Platform
 
-> A full-stack quantitative trading simulator with a proprietary AI scoring engine, multi-horizon XGBoost ML predictions, and a database-cached architecture for zero-cost cloud deployment.
+> A full-stack quantitative trading simulator with a rule-based fundamental scoring engine, multi-horizon XGBoost ML predictions, and a database-cached architecture for zero-cost cloud deployment.
 
 ---
 
@@ -11,7 +11,7 @@
 4. [Database Schema](#4-database-schema)
 5. [Data Pipeline](#5-data-pipeline)
 6. [Fundamental Scoring Engine](#6-fundamental-scoring-engine)
-7. [Machine Learning — Quantitative AI System](#7-machine-learning--quantitative-ai-system)
+7. [Machine Learning — Quantitative ML System](#7-machine-learning--quantitative-ml-system)
 8. [API Endpoints](#8-api-endpoints)
 9. [Frontend Pages](#9-frontend-pages)
 10. [Deployment Guide](#10-deployment-guide)
@@ -25,8 +25,8 @@ TradeMind is a high-performance virtual trading and quantitative intelligence pl
 
 - Browse a real-time market screener of **160+ stocks** across India (Nifty 50), Global (S&P 500 top picks), and US markets.
 - Execute simulated BUY/SELL trades with real market prices, tracked P&L, and a full transaction history.
-- View proprietary **Fundamental Intelligence Scores** calculated by a custom rule-based scoring engine.
-- Run **AI-powered multi-horizon price predictions** (1-Day, 7-Day, 30-Day) powered by XGBoost ML models.
+- View **Fundamental Intelligence Scores** calculated by a custom rule-based scoring engine.
+- Run **ML-powered multi-horizon price predictions** (1-Day, 7-Day, 30-Day) powered by XGBoost ML models.
 - Read aggregated financial news via a dedicated News page.
 
 ---
@@ -226,7 +226,7 @@ The engine detects the sector (Banking, IT Services, Manufacturing, Energy/PSU, 
 
 ---
 
-## 7. Machine Learning — Quantitative AI System
+## 7. Machine Learning — Quantitative ML System
 
 **Files:** `backend/services/backtest_engine.py`, `backend/services/ml_features.py`, `backend/batch_run_ml.py`
 
@@ -341,7 +341,7 @@ The model is **fully retrained from scratch** each day (not incrementally update
 | Dashboard | `Dashboard.jsx` | Portfolio summary, P&L, quick market overview |
 | Market Screener | `stocks.jsx` | Browse 160+ stocks, filter by market, live prices |
 | Stock Details | `StockDetails.jsx` | Price chart, trading widget, company info, news |
-| Strategic Analysis | `StockAnalysis.jsx` | Fundamental score + AI signal dashboard |
+| Strategic Analysis | `StockAnalysis.jsx` | Fundamental score + ML signal dashboard |
 | Portfolio | `Portfolio.jsx` | Holdings, realized/unrealized P&L, trade history |
 | News | `News.jsx` | Aggregated financial news via Finnhub |
 | Profile | `Profile.jsx` | User settings, balance display |
@@ -378,7 +378,7 @@ cd C:\Virtual-Trading-Portfolio-Intelligence-Platform\backend
 .\venv\Scripts\python scripts\update_all_data.py
 ```
 
-### Retrain AI Models (~10-15 min)
+### Retrain ML Models (~10-15 min)
 ```powershell
 cd C:\Virtual-Trading-Portfolio-Intelligence-Platform\backend
 .\venv\Scripts\python batch_run_ml.py
@@ -386,5 +386,5 @@ cd C:\Virtual-Trading-Portfolio-Intelligence-Platform\backend
 
 ### Recommended Schedule
 - **Daily** (after 3:30 PM IST market close): Run `update_all_data.py` for fresh prices.
-- **Daily** (after prices are updated): Run `batch_run_ml.py` to retrain AI on today's new data.
+- **Daily** (after prices are updated): Run `batch_run_ml.py` to retrain ML models on today's new data.
 - The ML script automatically **skips stocks already trained today** (within 24 hours), so it is safe to run multiple times.

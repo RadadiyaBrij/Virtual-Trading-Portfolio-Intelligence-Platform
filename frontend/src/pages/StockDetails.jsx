@@ -207,8 +207,8 @@ export default function StockDetails() {
                 <span className="text-2xl group-hover:scale-110 transition-transform duration-300 block">🧠</span>
               </div>
               <div className="flex flex-col items-start text-left">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-400 mb-0.5">Proprietary Engine</span>
-                <span className="text-lg font-bold text-gray-100 group-hover:text-white transition-colors tracking-wide">Strategic Intelligence Analysis</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-400 mb-0.5">Fundamental Scoring Engine</span>
+                <span className="text-lg font-bold text-gray-100 group-hover:text-white transition-colors tracking-wide">Strategic Fundamental Analysis</span>
               </div>
             </div>
           </Link>

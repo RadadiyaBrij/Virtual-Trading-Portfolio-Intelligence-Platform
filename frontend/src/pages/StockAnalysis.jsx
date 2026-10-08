@@ -258,7 +258,7 @@ export default function StockAnalysis() {
           <div className="w-14 h-14 border-4 border-purple-900 rounded-full animate-spin border-t-purple-500 absolute top-3 left-3" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
         </div>
         <p className="text-gray-400 mt-6 font-medium animate-pulse">Analyzing {symbol}...</p>
-        <p className="text-gray-600 text-sm mt-2">Running Financial Intelligence Engine</p>
+        <p className="text-gray-600 text-sm mt-2">Running Fundamental Scoring Engine</p>
       </div>
     </div>
   );
@@ -419,11 +419,11 @@ export default function StockAnalysis() {
           </section>
         )}
 
-        {/* ── Multi-Horizon AI System ── */}
+        {/* ── Multi-Horizon ML System ── */}
         <section>
           <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
             <span className="w-1.5 h-6 bg-blue-500 rounded-full" />
-            Quantitative AI System (30-Day Horizon)
+            Quantitative ML System (30-Day Horizon)
           </h2>
           {mlLoading ? (
             <div className="p-6 rounded-2xl bg-gray-900/60 border border-gray-800 text-center text-gray-400 animate-pulse">Running 3 Independent ML Pipelines (1D, 7D, 30D)...</div>
