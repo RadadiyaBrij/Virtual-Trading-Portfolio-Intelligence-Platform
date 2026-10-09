@@ -32,15 +32,31 @@ export default function Stocks() {
     }
 
     try {
-      for (const chunk of chunks) {
-        const response = await fetch(`${(import.meta.env.VITE_API_URL || "").replace(/\/$/, "")}/stocks/batch?symbols=${encodeURIComponent(chunk)}`);
-        if (!response.ok) {
-          console.warn('Failed to fetch a chunk, skipping to next');
-          continue;
+      const apiUrl = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+      
+      // 1. Fetch first chunk immediately so user sees the initial 10 stocks right away
+      if (chunks.length > 0) {
+        const firstRes = await fetch(`${apiUrl}/stocks/batch?symbols=${encodeURIComponent(chunks[0])}`);
+        if (firstRes.ok) {
+          const firstData = await firstRes.json();
+          setStockData(firstData);
         }
-        const data = await response.json();
-        // Append new stocks progressively as they arrive
-        setStockData(prev => [...prev, ...data]);
+      }
+
+      // 2. Fetch all remaining chunks concurrently in parallel
+      if (chunks.length > 1) {
+        const remainingPromises = chunks.slice(1).map(async (chunk) => {
+          try {
+            const res = await fetch(`${apiUrl}/stocks/batch?symbols=${encodeURIComponent(chunk)}`);
+            if (res.ok) {
+              const data = await res.json();
+              setStockData(prev => [...prev, ...data]);
+            }
+          } catch (e) {
+            console.warn('Failed to fetch a chunk', e);
+          }
+        });
+        await Promise.all(remainingPromises);
       }
     } catch (err) {
       console.error(err);

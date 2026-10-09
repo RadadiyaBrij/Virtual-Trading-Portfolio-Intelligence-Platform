@@ -134,9 +134,13 @@ def get_stocks_batch(symbols: str = Query(...), db: Session = Depends(get_db)):
         sym_list = [s.strip().upper() for s in symbols.split(",") if s.strip()]
         if not sym_list: return []
         
+        # Fetch all symbols in 1 single query instead of N sequential roundtrips
+        records = db.query(ChartCache).filter(ChartCache.symbol.in_(sym_list)).all()
+        cache_map = {r.symbol.upper(): r for r in records}
+        
         results = []
         for sym in sym_list:
-            c_cache = db.query(ChartCache).filter(ChartCache.symbol == sym).first()
+            c_cache = cache_map.get(sym)
             if c_cache:
                 curr = c_cache.current_price or 0.0
                 prev = c_cache.previous_close or 0.0

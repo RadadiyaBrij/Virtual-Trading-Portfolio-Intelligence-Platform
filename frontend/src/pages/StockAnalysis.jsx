@@ -517,38 +517,19 @@ export default function StockAnalysis() {
                 </div>
               </div>
 
-              {/* Right Column: Why this signal (Explainability) & Performance */}
+              {/* Right Column: Why this signal (Explainability) */}
               <div className="lg:col-span-1 space-y-4">
-                <div className="p-5 rounded-xl bg-gray-900/60 border border-gray-800">
+                <div className="p-5 rounded-xl bg-gray-900/60 border border-gray-800 h-full">
                   <h4 className="text-sm font-bold text-gray-200 mb-3 flex items-center gap-2">
                     <FiZap className="text-purple-400" /> Reason (Why this signal?)
                   </h4>
-                  <ul className="space-y-2">
+                  <ul className="space-y-4 mt-6">
                     {mlAnalysis.reasons?.map((reason, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-sm text-gray-400">
+                      <li key={idx} className="flex items-start gap-3 text-sm text-gray-300">
                         <span className="text-green-500 mt-0.5">✔</span> {reason}
                       </li>
                     ))}
                   </ul>
-                </div>
-
-                <div className="p-5 rounded-xl bg-gray-900/60 border border-gray-800">
-                  <h4 className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-3">Performance</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="block text-xs text-gray-500 mb-1">Win Rate</span>
-                      <span className="text-sm font-bold text-white">{mlAnalysis.winRate}%</span>
-                    </div>
-                    <div>
-                      <span className="block text-xs text-gray-500 mb-1">Max Drawdown</span>
-                      <span className="text-sm font-bold text-red-400">{mlAnalysis.maxDrawdown}%</span>
-                    </div>
-                    <div className="col-span-2 flex justify-between items-center">
-                      <span className="text-xs text-gray-500">Strategy vs Market</span>
-                      <span className="text-sm font-bold text-blue-400">{mlAnalysis.strategySumReturn}% <span className="text-gray-600 font-normal">vs</span> {mlAnalysis.buyAndHoldReturn}%</span>
-                    </div>
-
-                  </div>
                 </div>
               </div>
 

@@ -106,81 +106,27 @@ def run_backtest(symbol: str) -> dict:
             return {"status": "error", "message": "Failed to align test predictions"}
             
        
-        # We will use the 30-day horizon as our main holding period.
-        HOLDING_PERIOD = 30
-        TRANSACTION_COST = 0.001 
-        
-        in_trade = False
-        days_in_trade = 0
-        trade_returns = []
-        equity_curve = [1.0] 
-        
-        trades_taken = 0
-        winning_trades = 0
-        
-        for idx, row in predictions.iterrows():
-            prob_30d = row['prob_30d']
-            prob_7d = row['prob_7d']
-            prob_1d = row['prob_1d']
-            
-            # Multi-Horizon Decision Logic
-            is_strong_buy = prob_30d > 0.55 and prob_7d > 0.55 and prob_1d > 0.55
-            is_buy_dip = prob_30d > 0.55 and prob_7d > 0.55 and prob_1d < 0.50
-            
-            signal = is_strong_buy or is_buy_dip
-            
-            if in_trade:
-                days_in_trade += 1
-                # If holding period is reached, exit trade
-                if days_in_trade >= HOLDING_PERIOD:
-                    in_trade = False
-                    days_in_trade = 0
-            else:
-                if signal:
-                    # Enter trade
-                    in_trade = True
-                    days_in_trade = 0
-                    trades_taken += 1
-                    
-                    # The return over the next 30 days is our target_30d
-                    raw_return = row['target_30d']
-                    # Apply transaction costs (Entry + Exit)
-                    net_return = raw_return - (TRANSACTION_COST * 2)
-                    
-                    trade_returns.append(net_return)
-                    if net_return > 0:
-                        winning_trades += 1
-                        
-                    # Update equity curve
-                    equity_curve.append(equity_curve[-1] * (1 + net_return))
-        
-        
-        total_strategy_return = (equity_curve[-1] - 1) if equity_curve else 0
-        win_rate = winning_trades / trades_taken if trades_taken > 0 else 0
-        avg_trade_return = np.mean(trade_returns) if trade_returns else 0
-        
-        start_price = target_df.loc[predictions.index[0]]['Close']
-        end_price = target_df.loc[predictions.index[-1]]['Close']
-        buy_and_hold_return = (end_price / start_price) - 1
-        
-        equity_series = pd.Series(equity_curve)
-        rolling_max = equity_series.cummax()
-        drawdowns = (equity_series - rolling_max) / rolling_max
+        # Calculate Risk Level based on asset's actual historical drawdown over the test period
+        test_closes = target_df.loc[predictions.index]['Close']
+        rolling_max = test_closes.cummax()
+        drawdowns = (test_closes - rolling_max) / rolling_max
         max_drawdown = float(drawdowns.min()) if not drawdowns.empty else 0.0
         
         latest = predictions.iloc[-1]
         p30, p7, p1 = latest['prob_30d'], latest['prob_7d'], latest['prob_1d']
         
         def get_horizon_metrics(p, h_name):
-            conf = "HIGH" if p > 0.58 else ("MEDIUM" if p >= 0.52 else "LOW")
+            # Calculate absolute distance from 0.50 to measure confidence in either direction
+            dist = abs(p - 0.50)
+            conf = "HIGH" if dist > 0.08 else ("MEDIUM" if dist >= 0.02 else "LOW")
             signal_str = "BUY" if p > 0.52 else ("SELL" if p < 0.48 else "NEUTRAL")
             
-            # Calculate average return of historical positive targets for this horizon
-            mask = (predictions[f'prob_{h_name}'] > 0.50) & (predictions[f'target_{h_name}'] > 0)
+            # Calculate average return of historical BUY predictions for this horizon (including both wins and losses)
+            mask = predictions[f'prob_{h_name}'] > 0.50
             if mask.sum() > 5:
-                wins = predictions.loc[mask, f'target_{h_name}'] * 100
-                avg = float(wins.mean())
-                std = float(wins.std()) if len(wins) > 1 else 1.0
+                historical_returns = predictions.loc[mask, f'target_{h_name}'] * 100
+                avg = float(historical_returns.mean())
+                std = float(historical_returns.std()) if len(historical_returns) > 1 else 1.0
                 lb = avg - (std/2)
                 if lb < 0: lb = 0.1
                 ub = avg + std
@@ -197,7 +143,8 @@ def run_backtest(symbol: str) -> dict:
         trend_7d = "Bullish" if p7 > 0.52 else ("Bearish" if p7 < 0.48 else "Neutral")
         trend_1d = "Bullish" if p1 > 0.52 else ("Pullback" if p1 < 0.48 else "Neutral")
         
-        final_conf_str = "HIGH" if p30 > 0.58 else ("MEDIUM" if p30 >= 0.52 else "LOW")
+        dist_30d = abs(p30 - 0.50)
+        final_conf_str = "HIGH" if dist_30d > 0.08 else ("MEDIUM" if dist_30d >= 0.02 else "LOW")
         
         if p30 > 0.52 and p7 > 0.52 and p1 > 0.52:
             latest_signal = "BUY"
@@ -285,12 +232,7 @@ def run_backtest(symbol: str) -> dict:
             "actionHolding": action_holding,
             "suggestedAllocation": allocation,
             "reasons": reasons,
-            "modelAccuracy": round(float(model_metrics.get("30d", {}).get("accuracy", 0)) * 100, 1),
-            "winRate": round(float(win_rate) * 100, 1),
-            "maxDrawdown": round(float(max_drawdown) * 100, 1),
-            "strategySumReturn": round(float(total_strategy_return) * 100, 1),
-            "buyAndHoldReturn": round(float(buy_and_hold_return) * 100, 1),
-            "tradesTaken": trades_taken
+            "modelAccuracy": round(float(model_metrics.get("30d", {}).get("accuracy", 0)) * 100, 1)
         }
     except Exception as e:
         import traceback
