@@ -190,23 +190,32 @@ The scoring engine calculates a proprietary **0–100 Fundamental Score** for ev
 ```
 Total Score (0–100)
 │
-├── Profitability (30 pts)
-│     ├── ROE — Return on Equity       (10 pts)
-│     ├── ROCE — Return on Capital     (8 pts)
-│     └── PAT Margin — Net Profit %    (7 pts)
+├── Profitability (30% weight) — normalized from 25 raw pts
+│     ├── ROE — Return on Equity       (10 raw pts / 40% of group)
+│     ├── ROCE — Return on Capital     (8 raw pts / 32% of group)
+│     └── PAT Margin — Net Profit %    (7 raw pts / 28% of group)
 │
-├── Growth (25 pts)
-│     ├── Sales Growth YoY             (10 pts)
-│     └── Profit Growth YoY           (10 pts)
+├── Growth (25% weight) — normalized from 20 raw pts
+│     ├── Sales Growth YoY             (10 raw pts / 50% of group)
+│     └── Profit Growth YoY            (10 raw pts / 50% of group)
 │
-├── Financial Health (25 pts)
-│     ├── Debt-to-Equity Ratio         (10 pts)
-│     └── Current Ratio                (10 pts)
+├── Financial Health (25% weight) — normalized from 20 raw pts
+│     ├── Debt-to-Equity Ratio         (10 raw pts / 50% of group)
+│     ├── Cash vs Market Cap           (5 raw pts / 25% of group)
+│     └── Enterprise Value             (5 raw pts / 25% of group)
 │
-└── Valuation (20 pts)
-      ├── Price-to-Earnings (PE)       (10 pts)
-      └── Price-to-Book (PB)           (8 pts)
+└── Valuation (20% weight) — normalized from 15 raw pts
+      ├── Price-to-Earnings (PE)       (7 raw pts / 46.7% of group)
+      ├── Price-to-Book (PB)           (5 raw pts / 33.3% of group)
+      └── EV / Market Cap Ratio        (3 raw pts / 20.0% of group)
 ```
+
+> **How Group Normalization Works:**
+> Each parameter has an internal rating scale (e.g., 10 + 8 + 7 = 25 raw pts for Profitability). The function `_calculate_group_score()` normalizes active parameters to the group weight using:
+> $$\text{Group Score} = \left(\frac{\sum \text{Earned Points}}{\sum \text{Max Active Points}}\right) \times \text{Group Weight}$$
+> This serves two critical purposes:
+> 1. **Sector-aware parameter ignoring**: If a metric is ignored (e.g., Debt/Equity for Banks or P/B for IT), the stock is not penalized — active metrics scale up cleanly to the full group weight.
+> 2. **Granular parameter weighting**: Lets each metric carry appropriate relative importance within its domain before mapping to the final 100-point scale.
 
 ### Sector-Aware Scoring
 The engine detects the sector (Banking, IT Services, Manufacturing, Energy/PSU, Consumer/FMCG) and applies **different thresholds** per sector. For example:
@@ -271,9 +280,12 @@ STEP 3: Target Label Creation
 │   ├── 7-Day: "Did the stock go UP after 7 days?"   → 1 or 0
 │   └── 30-Day: "Did the stock go UP after 30 days?" → 1 or 0
 │
-STEP 4: Train/Test Split
-│   80% of historical data → Training set
-│   20% most recent data  → Test set (for accuracy measurement)
+STEP 4: Train/Test Split with Purging (Zero Target Leakage)
+│   ├── Chronological 80/20 split prevents shuffle lookahead bias
+│   ├── Purging buffer applied: drops the last N days (1, 7, or 30 days)
+│   │   of the training set so target forward-looking windows never
+│   │   extend across the test boundary (De Prado's Purging method)
+│   └── 20% most recent data → completely independent Test set
 │
 STEP 5: XGBoost Model Training
 │   Model: XGBClassifier

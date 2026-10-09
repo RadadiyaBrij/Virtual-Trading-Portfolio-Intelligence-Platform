@@ -58,7 +58,8 @@ def run_backtest(symbol: str) -> dict:
                     continue
                     
                 split = int(len(df_features) * 0.8)
-                train_part = df_features.iloc[:split].copy()
+                # Purging: Drop the last h_days rows from training so target windows never overlap into test_df
+                train_part = df_features.iloc[:(split - h_days)].copy()
                 
                 train_features_list.append(train_part)
                 
