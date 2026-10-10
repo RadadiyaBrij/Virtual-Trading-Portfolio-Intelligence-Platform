@@ -428,10 +428,10 @@ export default function StockAnalysis() {
           {mlLoading ? (
             <div className="p-6 rounded-2xl bg-gray-900/60 border border-gray-800 text-center text-gray-400 animate-pulse">Running 3 Independent ML Pipelines (1D, 7D, 30D)...</div>
           ) : mlAnalysis ? (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-              {/* Left Column: Final Signal & Risk Level */}
-              <div className="lg:col-span-1 space-y-4">
+              {/* Left Column: Final Signal, Risk Level, & Explainability */}
+              <div className="space-y-4">
                 <div className="p-6 rounded-2xl bg-linear-to-br from-gray-900 to-gray-950 border border-gray-800 text-center relative overflow-hidden group">
                   <div className="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-2">FINAL STRATEGY SIGNAL</span>
@@ -458,9 +458,22 @@ export default function StockAnalysis() {
                     </div>
                   </div>
                 </div>
+
+                <div className="p-5 rounded-xl bg-gray-900/60 border border-gray-800">
+                  <h4 className="text-sm font-bold text-gray-200 mb-3 flex items-center gap-2">
+                    <FiZap className="text-purple-400" /> Reason (Why this signal?)
+                  </h4>
+                  <ul className="space-y-3 mt-4">
+                    {mlAnalysis.reasons?.map((reason, idx) => (
+                      <li key={idx} className="flex items-start gap-3 text-sm text-gray-300">
+                        <span className="text-green-500 mt-0.5">✔</span> {reason}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-              {/* Middle Column: Signal Breakdown & Expected Returns */}
-              <div className="lg:col-span-1 space-y-4">
+              {/* Right Column: Signal Breakdown & Expected Returns */}
+              <div className="space-y-4">
                 <div className="p-5 rounded-xl bg-gray-900/60 border border-gray-800">
                   <h4 className="text-sm font-bold text-gray-200 mb-4 flex items-center gap-2">
                     <FiActivity className="text-blue-400" /> Signal Breakdown
@@ -514,22 +527,6 @@ export default function StockAnalysis() {
                   <div className="mt-4 p-2 rounded bg-blue-500/10 border border-blue-500/20 text-xs text-blue-400 flex items-center gap-2">
                     <span>⚠️</span> <span>Estimated range, not guaranteed</span>
                   </div>
-                </div>
-              </div>
-
-              {/* Right Column: Why this signal (Explainability) */}
-              <div className="lg:col-span-1 space-y-4">
-                <div className="p-5 rounded-xl bg-gray-900/60 border border-gray-800 h-full">
-                  <h4 className="text-sm font-bold text-gray-200 mb-3 flex items-center gap-2">
-                    <FiZap className="text-purple-400" /> Reason (Why this signal?)
-                  </h4>
-                  <ul className="space-y-4 mt-6">
-                    {mlAnalysis.reasons?.map((reason, idx) => (
-                      <li key={idx} className="flex items-start gap-3 text-sm text-gray-300">
-                        <span className="text-green-500 mt-0.5">✔</span> {reason}
-                      </li>
-                    ))}
-                  </ul>
                 </div>
               </div>
 
